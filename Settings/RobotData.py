@@ -7,10 +7,8 @@ __date__ = "Feb 14, 2020"
 __version__ = "0.0.1"
 __status__ = "Prototype"
 
-import pdb
-import numpy as np
+
 from Settings.Macros_DAnTE import *
-import time
 
 
 class FingerDataStructure(object):

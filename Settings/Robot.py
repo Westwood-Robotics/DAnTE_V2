@@ -8,9 +8,6 @@ __version__ = "0.0.1"
 __status__ = "Prototype"
 
 
-import os
-import time
-from Settings.Macros_DAnTE import *
 from Settings.RobotData import *
 
 THUMB = FingerDataStructure("THUMB", BEAR_THUMB, False)

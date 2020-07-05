@@ -11,8 +11,6 @@ __status__ 		= "Prototype"
 Script that holds useful macros that can be used to link a joint name to its joint id, for example.
 """
 
-import numpy as np
-
 # ==================================================
 # ==================================================
 # CONSTANTS

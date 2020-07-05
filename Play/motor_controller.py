@@ -13,8 +13,6 @@ This module is used to communicate with the BEAR modules on the DAnTE platform
 
 from pybear import Manager
 import math
-import time
-import os
 from Settings.Robot import *
 
 

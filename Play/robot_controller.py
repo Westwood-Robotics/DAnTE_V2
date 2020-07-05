@@ -8,12 +8,10 @@ __status__ = "Prototype"
 
 import time
 import os
-import numpy as nmp
 from pathlib import Path
 from Play.motor_controller import MotorController
 from Settings.Robot import *
 import matplotlib.pyplot as plt
-from pybear import Manager
 import pdb
 
 

@@ -11,7 +11,6 @@ import os
 import numpy as nmp
 from Play.motor_controller import MotorController
 from Settings.Robot import *
-from Play.initialization import *
 import pdb
 
 MC = MotorController(DAnTE.baudrate, DAnTE.port)

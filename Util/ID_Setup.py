@@ -10,9 +10,6 @@ __status__ = "Prototype"
 # Simple code to set ID for BEAR
 
 from pybear import Manager
-import time
-import sys
-import pdb
 
 bear = Manager.BEAR(port="/dev/ttyUSB0", baudrate=8000000)
 m_id = 1

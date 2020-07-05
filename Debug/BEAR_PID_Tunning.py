@@ -11,7 +11,6 @@ import os
 import numpy as nmp
 from Play.motor_controller import MotorController
 from Settings.Robot import *
-from Play.initialization import *
 import pdb
 
 MC = MotorController(DAnTE.baudrate, DAnTE.port)
@@ -25,7 +24,6 @@ MC = MotorController(DAnTE.baudrate, DAnTE.port)
 usr = input("Move THUMB to a safe position then press any key and enter.")
 # Set PID and position mode, then get present position
 MC.init_driver(THUMB.motor_id)
-set_init_PID(THUMB.motor_id, MC)
 MC.pbm.set_p_gain_force((THUMB.motor_id, 1.5))
 MC.pbm.set_i_gain_force((THUMB.motor_id, 0))
 MC.pbm.set_d_gain_force((THUMB.motor_id, 0.25))

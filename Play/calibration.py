@@ -12,7 +12,6 @@ import numpy as nmp
 from pathlib import Path
 from Play.motor_controller import MotorController
 from Settings.Robot import *
-# from pybear import Manager
 import pdb
 
 # -----------------------------
