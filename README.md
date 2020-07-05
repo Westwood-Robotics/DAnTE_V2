@@ -82,7 +82,7 @@ This function controls the grab motion of DAnTE:
 
 Use release() function for releasing.
 
-Under construction.
+**This function is currently under construction.**
 
 #### 2. Tunning
 
