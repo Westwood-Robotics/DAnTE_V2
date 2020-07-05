@@ -8,9 +8,6 @@ __version__ = "0.0.1"
 __status__ = "Prototype"
 
 
-from Settings.Macros_DAnTE import *
-
-
 class FingerDataStructure(object):
 
     def __init__(self, name, motor_id, mirrored):

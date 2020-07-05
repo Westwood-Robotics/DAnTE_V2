@@ -131,9 +131,7 @@ class RobotController(object):
         enable = sum(self.MC.get_enable_all()) == 3
         return enable
 
-    # TODO: def set_position_limits() and use in grab
-
-    def initialization_full(self):
+    def initialization(self):
 
         # Full hand initialization.
 
@@ -374,7 +372,7 @@ class RobotController(object):
 
     def grab(self, gesture, mode, **options):
         # Control grab motion of self.robot
-        # Start with a new_gesture, tripod(Y), pinch(I) or parallel(P)
+        # Grab with a gesture, tripod(Y), pinch(I) or parallel(P)
         # Specify a grab mode: (H)old or (G)rip
         # Optional kwargs: (if not specified, go with a default value)
         # - Approach speed (approach_speed)

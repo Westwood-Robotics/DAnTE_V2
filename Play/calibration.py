@@ -220,7 +220,12 @@ def calibration_single(f, motor_controller):
 
 
 def calibration_full(motor_controller):
-    # Calibrate all three fingers
+    # Calibrate the whole hand.
+
+    # TODO: add Dynamixel calibration
+    # TODO: ping all actuators at the beginning
+
+    # TODO: Calibrate Dynamixel first.
 
     motor_controller.init_driver_all()
 

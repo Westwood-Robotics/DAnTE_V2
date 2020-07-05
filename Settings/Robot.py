@@ -9,6 +9,8 @@ __status__ = "Prototype"
 
 
 from Settings.RobotData import *
+from Settings.Macros_DAnTE import *
+from Settings.Constants_DAnTE import *
 
 THUMB = FingerDataStructure("THUMB", BEAR_THUMB, False)
 INDEX = FingerDataStructure("INDEX", BEAR_INDEX, False)
