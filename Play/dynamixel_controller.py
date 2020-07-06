@@ -19,7 +19,7 @@ import pdb
 
 class DynamixelController(object):
 
-    def __init__(self, DXL_ID, port='/dev/ttyUSB0', BAUDRATE = 57600):
+    def __init__(self, DXL_ID, BAUDRATE = 57600, port='/dev/ttyUSB0'):
 
         # Protocol version
         self.PROTOCOL_VERSION = 2.0  # See which protocol version is used in the Dynamixel
@@ -180,6 +180,18 @@ class DynamixelController(object):
             return False
         else:
             return True
+
+    def get_enable(self):
+        # Get torque enable status of Dynamixel
+        val, comm_result, error = self.packet_handler.read1ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_TORQUE_ENABLE, val)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return bool(val)
 
     def set_goal_position(self, goal_position):
         # Write goal position, value in radian

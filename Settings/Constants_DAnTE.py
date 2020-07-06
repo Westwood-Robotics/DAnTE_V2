@@ -46,6 +46,8 @@ BEAR_THUMB = 1
 BEAR_INDEX = 2
 BEAR_INDEX_M = 3
 
+DXL_PALM = 1
+
 # ------------------------------
 # BEAR MOTOR CHARACTERISTICS
 # ------------------------------

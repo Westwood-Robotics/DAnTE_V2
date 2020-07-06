@@ -67,3 +67,8 @@ TIMEOUT_GRIP = 3
 grip_p = 8
 grip_i = 10
 grip_d = 0
+
+# ------------------------------
+# RELEASE
+# ------------------------------
+let_go_margin = 0.15  # Angular displacement to release in let-go mode
