@@ -219,6 +219,19 @@ class DynamixelController(object):
             present_position = present_position*POSITION_UNIT
             return present_position
 
+    def get_present_velocity(self):
+        # Read present position, result in radian
+        present_velocity, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_PRESENT_VELOCITY)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            present_velocity = present_velocity*VELOCITY_UNIT
+            return present_velocity
+
     def set_profile_acceleration(self, val):
         """
         Sets acceleration of the Profile

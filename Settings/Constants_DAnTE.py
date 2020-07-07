@@ -70,7 +70,7 @@ IQID_P = 0.02
 IQID_I = 0.02
 IQID_D = 0
 
-POS_P = 10
+POS_P = 5
 POS_I = 0.01
 POS_D = 0
 
@@ -82,31 +82,14 @@ FOR_P = 1.5
 FOR_I = 0.0
 FOR_D = 0.15
 
-# THUMB
-THUMB_POS_P = 0.005
-THUMB_POS_I = 0.0000
-THUMB_POS_D = 0.005
+# IDLE
+# TODO: experiment this
+# These are position gains used for IDLE mode
+IDLE_P = 2
+IDLE_I = 0.01
+IDLE_D = 2
 
-THUMB_VEL_P = 0.200
-THUMB_VEL_I = 0.01
-THUMB_VEL_D = 0.0
 
-THUMB_FOR_P = 0.001
-THUMB_FOR_I = 0.0
-THUMB_FOR_D = 0.001
-
-# INDEX
-INDEX_POS_P = 0.005
-INDEX_POS_I = 0.0000
-INDEX_POS_D = 0.005
-
-INDEX_VEL_P = 0.200
-INDEX_VEL_I = 0.01
-INDEX_VEL_D = 0.0
-
-INDEX_FOR_P = 0.001
-INDEX_FOR_I = 0.0
-INDEX_FOR_D = 0.001
 
 # ==================================================
 # ==================================================

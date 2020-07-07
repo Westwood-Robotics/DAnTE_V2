@@ -12,6 +12,7 @@ CONTROL_TABLE for Dynamixel X series actuator
 '''
 # Unit
 POSITION_UNIT = 0.00153398078  # radian/value
+VELOCITY_UNIT = 0.02398082392  # (radian/s)/value  0.229 rpm
 
 # Control table address
 # EEPROM
@@ -24,6 +25,7 @@ ADDR_X_HOMING_OFFSET = 20
 ADDR_X_TORQUE_ENABLE = 64  # Control table address is different in Dynamixel model
 ADDR_X_GOAL_POSITION = 116
 ADDR_X_PRESENT_POSITION = 132
+ADDR_X_PRESENT_VELOCITY = 128
 ADDR_X_PROFILE_VELOCITY = 112
 ADDR_X_PROFILE_ACCELERATION = 108
 ADDR_X_PRESENT_LOAD = 126

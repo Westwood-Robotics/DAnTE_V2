@@ -13,6 +13,7 @@ from Play.motor_controller import MotorController
 from Play.dynamixel_controller import DynamixelController
 from Settings.Robot import *
 import matplotlib.pyplot as plt
+import math
 import pdb
 
 
@@ -153,6 +154,25 @@ class RobotController(object):
         else:
             self.MC.torque_enable_all(val)
             self.DC.torque_enable(val)
+
+    def idle(self, *fingers):
+        # Put specified finger into idle.
+        # If no finger specified, put whole hand in IDLE
+        # Dynamixel hold current position
+        # Related BEAR enters position mode and go to home with IDLE gains.
+        if not self.bypass_DXL:
+            palm_pos = self.DC.get_present_position()
+            self.DC.set_goal_position(palm_pos)
+
+        if len(fingers) == 0:
+            fingers = self.robot.fingerlist
+        for f in fingers:
+            self.MC.pbm.set_bulk_config((f.motor_id, 'p_gain_position', IDLE_P,
+                                                     'i_gain_position', IDLE_I,
+                                                     'd_gain_position', IDLE_D))
+            self.MC.set_mode(f.motor_id, 'position')
+            self.MC.torque_enable(f.motor_id, 1)
+            self.MC.pbm.set_goal_position((f.motor_id, 0))
 
     def initialization(self):
 
@@ -346,6 +366,7 @@ class RobotController(object):
 
     def change_gesture(self, new_gesture):
         # Change the gesture of DAnTE
+        # Will Fully release first.
 
         # Check enable first
         if self.get_robot_enable():
@@ -357,13 +378,14 @@ class RobotController(object):
         if self.gesture == new_gesture:
             # No need to change
             print('Already in gesture %s.' % new_gesture)
+            return True
         if new_gesture not in ['Y', 'I', 'P']:
             # Check for invalid input
             print("Invalid input.")  # TODO: Throw an exception
+            return False
 
         else:
             # change the new_gesture of self.robot to: tripod(Y), pinch(I) or parallel(P)
-            # TODO: read below and complete
             # Start with setting all fingers to position mode with initialization PID
             self.MC.set_mode_all('position')
             # Reset all fingers under present gesture before changing gesture
@@ -373,25 +395,53 @@ class RobotController(object):
             if new_gesture == 'Y':
                 # Change to tripod
                 print("Changing to Tripod.")
+                if self.bypass_DXL:
+                    usr = input("Bypass_DXL, please manually change DAnTE to Tripod mode, and press enter.")
+                else:
+                    DXL_goal_pos = self.robot.palm.home+math.pi/3
+                    self.DC.set_goal_position(DXL_goal_pos)
                 self.gesture = 'Y'
                 # Update balance_factor
                 self.balance_factor = [1, 1, 1]
-                print("Dynamixel offline.")
+
             elif new_gesture == 'I':
                 # Change to pinch
                 print("Changing to Pinch.")
+                if self.bypass_DXL:
+                    usr = input("Bypass_DXL, please manually change DAnTE to Pinch mode, and press enter.")
+                else:
+                    DXL_goal_pos = self.robot.palm.home+math.pi/2
+                    self.DC.set_goal_position(DXL_goal_pos)
                 self.gesture = 'I'
                 # Update balance_factor
                 self.balance_factor = [1, 1, 1]
-                # TODO: set THUMB in position mode with stiff damping and some P and a small I
-                print("Dynamixel offline.")
+                # Set THUMB in IDLE
+                self.idle(THUMB)
             else:
                 # Change to parallel
                 print("Changing to Parallel.")
+                if self.bypass_DXL:
+                    usr = input("Bypass_DXL, please manually change DAnTE to Parallel mode, and press enter.")
+                else:
+                    DXL_goal_pos = self.robot.palm.home
+                    self.DC.set_goal_position(DXL_goal_pos)
                 self.gesture = 'P'
                 # Update balance_factor
                 self.balance_factor = [1, 1, 2]
                 print("Dynamixel offline.")
+
+            # Check if DXL still moving before exiting
+            if not self.bypass_DXL:
+                running = True
+                while running:
+                    try:
+                        if self.DC.get_present_velocity()<0.1:
+                            running = False
+                    except KeyboardInterrupt:
+                        print("User interrupted.")
+                        running = False
+                        return False
+            return True
 
     def set_approach_stiffness(self):
         # Set the P,D gains for Direct Force mode according to approach_stiffness
@@ -873,109 +923,125 @@ class RobotController(object):
 
         # TODO: Check error
 
-    def release(self, gesture, mode, *hold_stiffness):
-        # TODO: Check enable first
+    def release(self, mode, *hold_stiffness):
         # Release motion of self.robot
         # All fingers run in position mode
         # Three release mode:
         # - change-to-(H)old = change to hold mode
         # - (L)et-go = release a little ,
-        # - (F)ully-release = fingers reset
+        # - (F)ul-release = fingers reset
 
+        # Check input
+        if mode not in ['H', 'L', 'F']:
+            print("Invalid mode.")  # TODO: Throw an exception
+            return False
 
-        self.MC.init_driver_all()
-        self.MC.set_mode_all('position')  # Motor will NOT disable after changing mode
+        if not self.get_robot_enable() or not self.robot.contact:
+            # If robot is not enabled or not in contact, only perform Full-release
+            if mode != 'F':
+                print("WARNING: DAnTE can only perform full release in current status.")
+                print("Switched to Full-release...")
+                mode = 'F'
 
-        # Reset finger.contact
-        for f in self.robot.fingerlist:
-            f.contact = False
+        # Check mode:
+        if self.mode == 'H':
+            # Hold mode, change to big D with small P
+            # Do not release contact
+            # Enforced writing
 
-        if mode == 'H':
-            # Change to hold with damping according to hold_stiffness
-            if hold_stiffness:
-                # Calculate a D gain from hold_stiffness
-                D = 0  # TODO
+            # Calculate HOLD_D according to hold_stiffness
+            hold_p = HOLD_P_FACTOR * hold_stiffness
+            hold_d = HOLD_D_FACTOR * hold_stiffness
+            if self.gesture == 'I':
+                # Pinch mode, use only index fingers
+                finger_count = 2
             else:
-                # Use a default D gain
-                D = 0
-            # Change PID setting
-            if gesture == 'I':
-                # Pinch mode, do not use Thumb
-                # Velocity PID
-                self.MC.pbm.set_p_gain_velocity((INDEX.motor_id, VEL_P), (INDEX_M.motor_id, VEL_P))
-                self.MC.pbm.set_i_gain_velocity((INDEX.motor_id, VEL_I), (INDEX_M.motor_id, VEL_I))
-                self.MC.pbm.set_d_gain_velocity((INDEX.motor_id, VEL_D), (INDEX_M.motor_id, VEL_D))
-                # Position PID
-                self.MC.pbm.set_p_gain_position((INDEX.motor_id, 0), (INDEX_M.motor_id, 0))
-                self.MC.pbm.set_i_gain_position((INDEX.motor_id, 0), (INDEX_M.motor_id, 0))
-                self.MC.pbm.set_d_gain_position((INDEX.motor_id, D), (INDEX_M.motor_id, D))
-            else:
-                # Velocity PID
-                self.MC.pbm.set_p_gain_velocity((THUMB.motor_id, VEL_P), (INDEX.motor_id, VEL_P),
-                                                (INDEX_M.motor_id, VEL_P))
-                self.MC.pbm.set_i_gain_velocity((THUMB.motor_id, VEL_I), (INDEX.motor_id, VEL_I),
-                                                (INDEX_M.motor_id, VEL_I))
-                self.MC.pbm.set_d_gain_velocity((THUMB.motor_id, VEL_D), (INDEX.motor_id, VEL_D),
-                                                (INDEX_M.motor_id, VEL_D))
-                # Position PID
-                self.MC.pbm.set_p_gain_position((THUMB.motor_id, 0), (INDEX.motor_id, 0), (INDEX_M.motor_id, 0))
-                self.MC.pbm.set_i_gain_position((THUMB.motor_id, 0), (INDEX.motor_id, 0), (INDEX_M.motor_id, 0))
-                self.MC.pbm.set_d_gain_position((THUMB.motor_id, D), (INDEX.motor_id, D), (INDEX_M.motor_id, D))
+                # Use all three fingers
+                finger_count = 3
 
-        elif mode == 'L':
-            # Let-go mode, release a little
-            goal_position = [0, 0, 0]
-            if gesture == 'I':
-                # Pinch mode, do not use Thumb
-                # Change PID setting
-                self.set_init_PID_index()
-                # Get present position
-                present_position = self.MC.pbm.get_present_position(INDEX.motor_id, INDEX_M.motor_id)
-                if present_position[0][0] < -let_go_margin:
-                    goal_position[0] = present_position[0][0] + let_go_margin
-                if present_position[1][0] > let_go_margin:
-                    goal_position[1] = present_position[1][0] - let_go_margin
-                # Set goal position
-                self.MC.pbm.set_goal_position((INDEX.motor_id, goal_position[0]), (INDEX_M.motor_id, goal_position[1]))
+            # Set D gain first
+            for i in range(finger_count):
+                self.MC.pbm.set_d_gain_force((self.robot.finger_ids[i], hold_d))
+            # Enforce writing
+            check = 0
+            while check < finger_count:
+                for i in range(finger_count):
+                    if self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0] != hold_d:
+                        self.MC.pbm.set_d_gain_force((self.robot.finger_ids[i], hold_d))
+                    else:
+                        check += 1
+            # Then set P gain
+            for i in range(finger_count):
+                self.MC.pbm.set_p_gain_force((self.robot.finger_ids[i], hold_p))
+            # Enforce writing
+            check = 0
+            while check < finger_count:
+                for i in range(finger_count):
+                    if self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0] != hold_p:
+                        self.MC.pbm.set_p_gain_force((self.robot.finger_ids[i], hold_p))
+                    else:
+                        check += 1
+            # Move goal_position forward for a bit more grabbing
+            # Calculate goal_position
+            goal_position = [
+                round(self.contact_position[i] +
+                      (self.robot.fingerlist[i].mirrored - (not self.robot.fingerlist[i].mirrored)) * delta_position, 4)
+                for i in range(finger_count)]
 
-            else:
-                # Change PID setting
-                self.set_init_PID_all()
-                # Get present position
-                present_position = self.MC.pbm.get_present_position(THUMB.motor_id, INDEX.motor_id, INDEX_M.motor_id)
-                if present_position[0][0] < -let_go_margin:
-                    goal_position[0] = present_position[0][0] + let_go_margin
-                if present_position[1][0] < -let_go_margin:
-                    goal_position[1] = present_position[1][0] + let_go_margin
-                if present_position[2][0] > let_go_margin:
-                    goal_position[2] = present_position[2][0] - let_go_margin
-                # Set goal position
-                self.MC.pbm.set_goal_position((THUMB.motor_id, goal_position[0]),
-                                              (INDEX.motor_id, goal_position[1]),
-                                              (INDEX_M.motor_id, goal_position[2]))
+            # Send command
+            for i in range(finger_count):
+                self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
+            # Enforce writing
+            check = 0
+            while check < finger_count:
+                for i in range(finger_count):
+                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0], 4) != goal_position[i]:
+                        self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
+                    else:
+                        check += 1
+            # Switch into Direct Force mode
+            for i in range(finger_count):
+                self.MC.set_mode(self.robot.finger_ids[i], 'force')
 
-        elif mode == 'F':
-            # Fully reset
-            if gesture == 'I':
-                # Pinch mode, do not use Thumb
-                # Change PID setting
-                self.set_init_PID_index()
-                # Set goal position
-                self.MC.pbm.set_goal_position((INDEX.motor_id, -0.05), (INDEX_M.motor_id, 0.05))
-            else:
-                # Change PID setting
-                self.set_init_PID_all()
-                # Set goal position
-                self.MC.pbm.set_goal_position((THUMB.motor_id, -0.05),
-                                              (INDEX.motor_id, -0.05),
-                                              (INDEX_M.motor_id, 0.05))
         else:
-            print("Invalid input for mode.")  # TODO: Throw an exception
+            # Let-go or Full-release
+            # Uses existing mode and gains
+            # Reset contact
+            for f in self.robot.fingerlist:
+                f.contact = False
+            self.robot.contact = False
 
-    def idle(self):
-        # Put DAnTE into idle
-        # All actuators hold position, including Dynamixel.
+            if self.gesture == 'I':
+                # Pinch mode, use only index fingers
+                finger_count = 2
+            else:
+                # Use all three fingers
+                finger_count = 3
 
+            # Calculate goal_position
+            if mode == 'L':
+                # Let-go, just release a little
+                sign = [(self.robot.fingerlist[i].mirrored - (not self.robot.fingerlist[i].mirrored)) for i in range(finger_count)]
+                goal_position = [self.contact_position[i] - sign[i] * let_go_margin for i in range(finger_count)]
+            else:
+                # Full-release
+                goal_position = [0, 0, 0]
+
+            # Send command
+            for i in range(finger_count):
+                self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
+            # Enforce writing
+            check = 0
+            while check < finger_count:
+                for i in range(finger_count):
+                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0], 4) != goal_position[i]:
+                        self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
+                    else:
+                        check += 1
+
+            # Put into IDLE if Full-release
+            if mode == 'F':
+                self.idle()
 
 
 if __name__ == '__main__':
