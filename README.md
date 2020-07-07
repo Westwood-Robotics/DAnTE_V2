@@ -1,5 +1,5 @@
 # DAnTE_V2
-Controller software for Westwood Robotics DAnTE_V2
+Controller software for Westwood Robotics DAnTE V2
 
 ## Dependencies
 
@@ -81,7 +81,6 @@ This function controls the grab motion of DAnTE:
 ###### 1.2 Release
 
 Use release() function for releasing.
-
 **This function is currently under construction.**
 
 #### 2. Tunning
