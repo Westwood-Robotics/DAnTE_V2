@@ -1,0 +1,10 @@
+# Move rules file into /etc/udev/rules.d/ with 'sudo cp'
+# Run 'sudo udevadm control --reload' in terminal to process the rules files
+# You will have a symlink that is: '/dev/WR-serial#', in which the serial# is the serial of the usb dangle
+# For example, a USB with serial number UB021 will be: /dev/WR-UB021
+
+# Already in WestwoodRobotics.rules:
+# SUBSYSTEM=="tty", ATTRS{product}=="USB2RoMeLa_Boosted", SYMLINK="WR-%s{serial}"
+
+# For DAnTE:
+SUBSYSTEM=="tty", ATTRS{interface}=="FT232R USB UART", SYMLINK="TTL-USB"

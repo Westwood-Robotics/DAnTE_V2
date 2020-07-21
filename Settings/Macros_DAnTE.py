@@ -57,15 +57,15 @@ approach_command_max = 3
 # ------------------------------
 # HOLD
 # ------------------------------
-delta_position = 0.1  # Move goal_position command inward by this amount at hold for firm contact
-grip_confirm = 4  # Times a grip must be confirmed before triggering
+delta_position = 0.15  # Move goal_position command inward by this amount at hold for firm contact
+grip_confirm = 1000  # Times a grip must be confirmed before triggering
 
 # ------------------------------
 # GRIP
 # ------------------------------
 TIMEOUT_GRIP = 3
-grip_p = 8
-grip_i = 10
+grip_p = 2
+grip_i = 12
 grip_d = 0
 
 # ------------------------------

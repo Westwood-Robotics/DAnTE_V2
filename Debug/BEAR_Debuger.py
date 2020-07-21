@@ -13,7 +13,7 @@ from Play.motor_controller import MotorController
 from Settings.Robot import *
 import pdb
 
-MC = MotorController(DAnTE.baudrate, DAnTE.port)
+MC = MotorController(DAnTE.BEAR_baudrate, DAnTE.BEAR_port)
 m_id = 1
 # ping = MC.pbm.ping(m_id)
 # print(ping)

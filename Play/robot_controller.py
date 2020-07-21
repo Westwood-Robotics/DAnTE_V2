@@ -55,7 +55,13 @@ class RobotController(object):
 
         self.robot = robot
         self.MC = MotorController(self.robot.BEAR_baudrate, self.robot.BEAR_port)
-        self.DC = DynamixelController(self.robot.palm.motor_id, self.robot.DXL_baudrate, self.robot.DXL_port)
+
+        # When debug, you might want to bypass Dynamixel
+        self.bypass_DXL = bypass_DXL
+        if self.bypass_DXL:
+            self.DC = None
+        else:
+            self.DC = DynamixelController(self.robot.palm.motor_id, self.robot.DXL_baudrate, self.robot.DXL_port)
 
         self.gesture = None
         self.mode = None
@@ -68,9 +74,6 @@ class RobotController(object):
         self.logging = False
         self.contact_position = [0, 0, 0]
         self.balance_factor = [1, 1, 1]  # Factor for force balance between fingers, update when change gesture
-
-        # When debug, you might want to bypass Dynamixel
-        self.bypass_DXL = bypass_DXL
 
         self.ascii_art = True
         self.welcome_msg()
@@ -306,7 +309,7 @@ class RobotController(object):
         self.MC.pbm.set_goal_position((THUMB.motor_id, 0),
                                       (INDEX.motor_id, 0),
                                       (INDEX_M.motor_id, 0))
-        time.sleep(1)
+        time.sleep(2)
         # pdb.set_trace()
         start_time = time.time()
         while sum(running):
@@ -320,7 +323,7 @@ class RobotController(object):
                 elapsed_time = time.time() - start_time
                 if elapsed_time < TIMEOUT_INIT:
                     for i in range(3):
-                        if abs(position[i]) < 0.015:
+                        if abs(position[i]) < 0.05:
                             running[i] = False
                             self.MC.torque_enable(self.robot.finger_ids[i], 0)
                         else:
@@ -626,7 +629,7 @@ class RobotController(object):
                     velocity_error = [goal_approach_speed[i] - velocity[i] for i in range(finger_count)]
                     velocity_error_int = [velocity_error[i] * delta_time + velocity_error_int[i] for i in range(finger_count)]
 
-                    # Determine if contact and Switch to torque mode and maintain iq upon contact
+                    # Determine if contact and Switch to torque mode and maintain detect iq upon contact
                     for idx in range(finger_count):
                         if not self.robot.fingerlist[idx].contact:
                             if iq_comp[idx] > self.detect_current:
@@ -646,7 +649,7 @@ class RobotController(object):
                                     goal_iq[idx] = iq_sign_balance*(self.detect_current + (abs(position[idx]) > SPRING_COMP_START) * (0.18 + 0.06 * (abs(position[idx]) - SPRING_COMP_START)))
                                     # approach_command[idx] = position[idx]
                                     # Send goal_iq
-                                    print(goal_iq[idx])
+                                    print('Finger iq:', goal_iq[idx])
                                     # Set into torque mode
                                     self.MC.set_mode(self.robot.finger_ids[idx], 'torque')
                                     self.MC.pbm.set_goal_iq((self.robot.finger_ids[idx], goal_iq[idx]))
@@ -686,14 +689,6 @@ class RobotController(object):
                     error = 2
 
             # Out of while loop -> error or contact
-            if error:
-                self.MC.torque_enable_all(0)
-                print("Grab error. System disabled.")
-            else:
-                # Switch to final grip/hold upon object detection
-                # pdb.set_trace()
-                self.grab_end()
-
             # Data processing -logging
             if self.logging:
                 # Format all data so that it is in this formation:
@@ -713,14 +708,39 @@ class RobotController(object):
 
                 # Plot here
                 id = 0
-                # plt.plot(time_log, iq_comp_log_all[0], 'r-', time_log, iq_comp_log_all[1], 'k-', time_log, iq_comp_log_all[2], 'b-')
-                plt.plot(time_log, delta_time_log)
+                plt.plot(time_log, iq_comp_log_all[0], 'r-', time_log, iq_comp_log_all[1], 'k-', time_log, iq_comp_log_all[2], 'b-')
+                # plt.plot(time_log, delta_time_log)
                 plt.grid(True)
                 plt.show()
+            if error:
+                self.MC.torque_enable_all(0)
+                print("Grab error. System disabled.")
+            else:
+
+                # # Debug option
+                # # Get current status for debug purpose.
+                # # Get mode for all
+                # modes = self.MC.pbm.get_mode(1, 2, 3)
+                # modes = [i[0] for i in modes]
+                # print('Modes:', modes)
+                # # Get goal_iq for all
+                # g_iq = self.MC.pbm.get_goal_iq(1, 2, 3)
+                # g_iq = [i[0] for i in g_iq]
+                # print('Goal_iq:', g_iq)
+                # # Get present_iq for all
+                # p_iq = self.MC.pbm.get_present_iq(1, 2, 3)
+                # p_iq = [i[0] for i in p_iq]
+                # print('Present_iq:', p_iq)
+
+                # Switch to final grip/hold upon object detection
+                # pdb.set_trace()
+                # usr = input("Press enter to proceed to grab_end...")
+
+                self.grab_end()
 
         return error
 
-    def grab_end(self):
+    def grab_end(self, plot=False):
 
         error = 0
 
@@ -805,6 +825,9 @@ class RobotController(object):
                 for i in range(finger_count)]
             # Clamp goal_iq with max_iq and balance force
             goal_iq = [min(max(goal_iq[i], -self.max_iq), self.max_iq)*self.balance_factor[i] for i in range(finger_count)]
+
+            print("Grip goal_iq:", goal_iq)
+
             iq = [0, 0, 0]
             iq_error_int = [0, 0, 0]
 
@@ -903,23 +926,25 @@ class RobotController(object):
 
             # Out of while loop, final_strength reached or error
 
-            # Plot functions
-            # iq_log_all = []
-            # grip_command_log_all = []
-            # iq_error_log_all = []
-            #
-            # for i in range(finger_count):
-            #     iq_log_all.append([data[i] for data in iq_log])
-            #     iq_error_log_all.append([data[i] for data in iq_error_log])
-            #     grip_command_log_all.append([data[i] for data in grip_command_log])
+            if plot:
+                # Plot functions
+                iq_log_all = []
+                grip_command_log_all = []
+                iq_error_log_all = []
 
-            # # Plot here
-            # id = 2
-            # # plt.plot(time_log, iq_comp_log_all[0], 'r-', time_log, iq_comp_log_all[1], 'k-', time_log, iq_comp_log_all[2], 'b-')
-            # plt.plot(time_log, iq_error_log_all[id], 'r-',
-            #          time_log, iq_log_all[id], 'b-')
-            # plt.grid(True)
-            # plt.show()
+                for i in range(finger_count):
+                    iq_log_all.append([data[i] for data in iq_log])
+                    iq_error_log_all.append([data[i] for data in iq_error_log])
+                    grip_command_log_all.append([data[i] for data in grip_command_log])
+
+                # Plot here
+                id = 2
+                # plt.plot(time_log, iq_comp_log_all[0], 'r-', time_log, iq_comp_log_all[1], 'k-', time_log, iq_comp_log_all[2], 'b-')
+                plt.plot(time_log, iq_log_all[0], 'r-',
+                         time_log, iq_log_all[1], 'b-',
+                         time_log, iq_log_all[2], 'g-')
+                plt.grid(True)
+                plt.show()
 
         # TODO: Check error
 

@@ -443,7 +443,7 @@ def calibration_full(motor_controller):
 
 if __name__ == '__main__':
     Robot = DAnTE
-    BEAR_controller = MotorController(DAnTE.baudrate, DAnTE.port)
+    BEAR_controller = MotorController(DAnTE.BEAR_baudrate, DAnTE.BEAR_port)
     user = input("Is this a (F)ull hand calibration or a (S)ingle finger calibration?")
     if user == 'F' or user == 'f':
         calibration_full(BEAR_controller)
