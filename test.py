@@ -9,7 +9,14 @@ __status__ = "Prototype"
 from Settings.Robot import *
 from Play.robot_controller import RobotController
 
-rc = RobotController(robot=DAnTE, bypass_DXL=True)
+rc = RobotController(robot=DAnTE)
 rc.start_robot()
 rc.initialization()
-rc.grab('Y', 'G', approach_speed=2, approach_stiffness=1, detect_current=0.3, max_iq=1, final_strength=0.75)
+# TODO: Release stand-alone test
+rc.set_robot_enable(0)
+print("Pose it.")
+usr = input("Press Enter to continue to release...")
+rc.release('F')
+
+# TODO: change gesture stand-alone test
+# TODO: initialize-grab(Y)-change_gesture(P)-grab(I)-release

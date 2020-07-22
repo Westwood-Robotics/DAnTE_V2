@@ -86,7 +86,7 @@ FOR_D = 0.15
 # TODO: experiment this
 # These are position gains used for IDLE mode
 IDLE_P = 2
-IDLE_I = 0.01
+IDLE_I = 0.0005
 IDLE_D = 2
 
 
@@ -136,7 +136,7 @@ approach_speed_min = 0.5
 # ------------------------------
 HOLD_P_FACTOR = 1.5
 HOLD_D_FACTOR = 1
-
+default_hold_stiffness = 0.5
 
 # ------------------------------
 # GRIP

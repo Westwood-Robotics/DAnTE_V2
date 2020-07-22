@@ -14,24 +14,14 @@ from Settings.Robot import *
 import pdb
 
 MC = MotorController(DAnTE.BEAR_baudrate, DAnTE.BEAR_port)
-m_id = 1
-# ping = MC.pbm.ping(m_id)
-# print(ping)
-mode = MC.pbm.get_mode(m_id)
-iq = MC.pbm.get_present_iq(m_id)
-goal_iq = MC.pbm.get_goal_iq(m_id)
-enable = MC.pbm.get_torque_enable(m_id)
-# p_gain = MC.pbm.get_p_gain_force(1,2,3)
-# d_gain = MC.pbm.get_d_gain_force(1,2,3)
-# # limit = MC.pbm.get_limit_position_min(2)
-print(mode)
-print(iq)
-print(goal_iq)
-print(enable)
-# print(pos)
-# print(p_gain)
-# print(d_gain)
-# # print(limit)
+m_id = 2
+MC.pbm.set_bulk_config((m_id, 'p_gain_position', IDLE_P,
+                              'i_gain_position', IDLE_I,
+                              'd_gain_position', IDLE_D))
+MC.set_mode(m_id, 'position')
+MC.torque_enable(m_id, 1)
+MC.pbm.set_goal_position((m_id, -0.5))
+
 
 
 

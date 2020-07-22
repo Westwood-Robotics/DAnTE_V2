@@ -13,8 +13,9 @@ from Play.dynamixel_controller import DynamixelController
 from Play.motor_controller import MotorController
 from Settings.Robot import *
 import pdb
+robot = DAnTE
 
-DC = DynamixelController(1)
+DC = DynamixelController(robot.palm.motor_id, robot.DXL_baudrate, robot.DXL_port)
 data = DC.get_present_position()
 print(data)
 
