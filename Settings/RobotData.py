@@ -8,6 +8,7 @@ __version__ = "0.0.1"
 __status__ = "Prototype"
 
 from Settings.Constants_DAnTE import *
+import math
 
 
 class FingerDataStructure(object):
@@ -30,6 +31,7 @@ class PalmDataStructure(object):
         self.name = name
         self.motor_id = motor_id
         self.homing_offset = 0  # Homing_offset for Dynamixel, if any.
+        self.travel = math.pi/2  # Total travel of BEAR for INDEX fingers to turn from parallel to pinch
         self.home = 0  # Home position for Dynamixel so that index fingers are in parallel
         self.initialized = False  # Palm has been initialized
         # Sensors to be added.

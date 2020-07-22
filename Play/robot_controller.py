@@ -20,7 +20,6 @@ import pdb
 # -----------------------------
 # Functions for basic robot motions
 # Enable all before sending commands
-# TODO: Create ideal function, putting all motors into damping mode
 
 
 def read_initials():

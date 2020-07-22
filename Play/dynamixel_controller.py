@@ -19,7 +19,7 @@ import pdb
 
 class DynamixelController(object):
 
-    def __init__(self, DXL_ID, BAUDRATE = 57600, port='/dev/ttyUSB0'):
+    def __init__(self, DXL_ID, BAUDRATE=2000000, port='/dev/TTL-USB'):
 
         # Protocol version
         self.PROTOCOL_VERSION = 2.0  # See which protocol version is used in the Dynamixel
