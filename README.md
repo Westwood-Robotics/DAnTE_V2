@@ -13,9 +13,23 @@ Due to the differences in data return format, the current RoMeLa PyBEAR will **N
 
 The Dynamixel SDK is also required to communicate with the Robotis X series actuator that is driving the index fingers on DAnTE V2. You can download it here:[Dynamixel SDK](https://github.com/ROBOTIS-GIT/DynamixelSDK)
 
+#### 3. Udev Rules
+
+Using the Boosted USB2BEAR/USB2RoMeLa device to communicate with BEAR, must add 00-WestwoodRobotics.rules from PyBEAR-WR_Rev first.
+Use a generic FT232 dangle to communicate with Dynamixel in palm, add Util/00-WR_DAnTE.rules before using
+Modify 00-WR_DAnTE.rules accordingly, if needed.
+
+Move 00-WR_DAnTE.rules file into /etc/udev/rules.d/ with 'sudo cp'
+Reload the rules
+```bash
+sudo udevadm control --reload
+```
+
 ## Work with DAnTE
 
 #### 0. Preperation
+
+###### 0.0 Robot.py
 
 ###### 0.1 Calibration
 
