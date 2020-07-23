@@ -12,11 +12,24 @@ from Play.robot_controller import RobotController
 rc = RobotController(robot=DAnTE)
 rc.start_robot()
 rc.initialization()
-# TODO: Release stand-alone test
-rc.set_robot_enable(0)
-print("Pose it.")
-usr = input("Press Enter to continue to release...")
+# # Release stand-alone test
+# rc.set_robot_enable(0)
+# print("Pose it.")
+# usr = input("Press Enter to continue to release...")
+# rc.release('F')
+
+# # Change gesture stand-alone test
+# usr = input("Press Enter to continue to change...")
+# rc.change_gesture('I')
+
+# grab(Y)-change_gesture(P)-grab(I)-release
+usr = input("Press Enter to continue to grab-Y...")
+rc.grab('Y', 'H', approach_speed=3)
+usr = input("Press Enter to continue to change...")
+rc.change_gesture('P')
+usr = input("Press Enter to continue to grab-I...")
+rc.grab('I', 'H')
+usr = input("Press Enter to release-F...")
 rc.release('F')
 
-# TODO: change gesture stand-alone test
-# TODO: initialize-grab(Y)-change_gesture(P)-grab(I)-release
+

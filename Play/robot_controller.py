@@ -95,14 +95,44 @@ class RobotController(object):
         error = 0b0000  # 4 bit respectively for INDEX, INDEX_M, THUMB, Dynamixel, 0b10000 for overall error.
 
         # Ping all motors
+        # BEAR:
         for idx, f in enumerate(self.robot.fingerlist):
-            if not bool(self.MC.pbm.ping(f.motor_id)):
-                print("%s offline." % f.name)
-                error = error | (1 << idx)
+            retry = 0
+            check = False
+            while not check:
+                if not bool(self.MC.pbm.ping(f.motor_id)):
+                    retry += 1
+                    if retry > PING_TRAIL_COUNT:
+                        # Tried PING_TRAIL_COUNT times and still no luck:
+                        print("%s offline." % f.name)
+                        error = error | (1 << idx)
+                        break
+                    else:
+                        # Retry in 0.5s
+                        print("%s offline. Retry in 0.5 second." % f.name)
+                        time.sleep(0.5)
+                else:
+                    # Ping succeed
+                    check = True
+        # DXL:
         if not self.bypass_DXL:
-            if not self.DC.ping():
-                print("Palm actuator offline.")
-                error = error | (1 << 3)
+            retry = 0
+            check = False
+            while not check:
+                if not self.DC.ping():
+                    retry += 1
+                    if retry > PING_TRAIL_COUNT:
+                        # Tried PING_TRAIL_COUNT times and still no luck:
+                        print("Palm actuator offline.")
+                        error = error | (1 << 3)
+                        break
+                    else:
+                        # Retry in 0.5s
+                        print("Palm actuator offline. Retry in 0.5 second.")
+                        time.sleep(0.5)
+                else:
+                    # Ping succeed
+                    check = True
 
         # Read initials, fact check and populate robot object
         init_data = read_initials()  # init_data = [['FINGER', motor_id, homing_offset, travel]...]
@@ -178,7 +208,7 @@ class RobotController(object):
                                                      'd_gain_position', IDLE_D))
             self.MC.set_mode(f.motor_id, 'position')
             self.MC.torque_enable(f.motor_id, 1)
-            self.MC.pbm.set_goal_position((f.motor_id, 0.5))
+            self.MC.pbm.set_goal_position((f.motor_id, 0))
             print("%s in idle." % f.name)
 
     def initialization(self):
@@ -327,7 +357,7 @@ class RobotController(object):
                 elapsed_time = time.time() - start_time
                 if elapsed_time < TIMEOUT_INIT:
                     for i in range(3):
-                        if abs(position[i]) < 0.05:
+                        if abs(position[i]) < 0.1:
                             running[i] = False
                             self.MC.torque_enable(self.robot.finger_ids[i], 0)
                         else:
@@ -399,9 +429,6 @@ class RobotController(object):
 
         else:
             # change the new_gesture of self.robot to: tripod(Y), pinch(I) or parallel(P)
-            # Start with setting all fingers to position mode with initialization PID
-            self.MC.init_driver_all()
-            self.MC.set_mode_all('position')
             # Reset all fingers under present gesture before changing gesture
             self.release('F')
 
@@ -424,8 +451,9 @@ class RobotController(object):
                 if self.bypass_DXL:
                     usr = input("Bypass_DXL, please manually change DAnTE to Pinch mode, and press enter.")
                 else:
-                    DXL_goal_pos = self.robot.palm.home+math.pi/2*(7/15)
+                    DXL_goal_pos = self.robot.palm.home + math.pi / 2 * (15 / 16)
                     self.DC.set_goal_position(DXL_goal_pos)
+                    time.sleep(0.5)
                 self.gesture = 'I'
                 # Update balance_factor
                 self.balance_factor = [1, 1, 1]
@@ -442,7 +470,6 @@ class RobotController(object):
                 self.gesture = 'P'
                 # Update balance_factor
                 self.balance_factor = [1, 1, 2]
-                print("Dynamixel offline.")
 
             # Check if DXL still moving before exiting
             if not self.bypass_DXL:
@@ -558,7 +585,7 @@ class RobotController(object):
                 if round(self.MC.pbm.get_limit_iq_max(THUMB.motor_id)[0][0], 4) == round(2 * self.max_iq, 4):
                     check = True
 
-        usr = input("Press enter to grab...")
+        # usr = input("Press enter to grab...")
 
         # 3. Fingers close tracking approach_speed, switch to final grip/hold upon object detection
         if self.robot.contact:
@@ -959,10 +986,10 @@ class RobotController(object):
 
         # TODO: Check error
 
-    def release(self, mode, *hold_stiffness):
+    def release(self, release_mode, *hold_stiffness):
         # Release motion of self.robot
         # All fingers run in position mode
-        # Three release mode:
+        # Three release modes:
         # - change-to-(H)old = change to hold mode
         # - (L)et-go = release a little ,
         # - (F)ul-release = fingers reset
@@ -974,7 +1001,7 @@ class RobotController(object):
             return error
 
         # Check input
-        if mode not in ['H', 'L', 'F']:
+        if release_mode not in ['H', 'L', 'F']:
             print("Invalid mode.")  # TODO: Throw an exception
             return False
 
@@ -983,19 +1010,21 @@ class RobotController(object):
             print("WARNING: Robot not enabled, enabling now.")
             self.set_robot_enable(1)
 
-            if mode != 'F':
+            if release_mode != 'F':
                 print("WARNING: DAnTE can only perform full release in current status.")
                 print("Switching to Full-release...")
-                mode = 'F'
+                release_mode = 'F'
 
         elif not self.robot.contact:
-            if mode != 'F':
+            if release_mode != 'F':
                 print("WARNING: DAnTE is currently not in contact with object thus can only perform full release.")
                 print("Switching to Full-release...")
-                mode = 'F'
+                release_mode = 'F'
+
+        print("Releasing...")
 
         # Check mode:
-        if self.mode == 'H':
+        if release_mode == 'H':
             # Hold mode, change to big D with small P
             # Do not release contact
             # Enforced writing
@@ -1072,7 +1101,7 @@ class RobotController(object):
                 finger_count = 3
 
             # Calculate goal_position
-            if mode == 'L':
+            if release_mode == 'L':
                 # Let-go, just release a little
                 sign = [(self.robot.fingerlist[i].mirrored - (not self.robot.fingerlist[i].mirrored)) for i in range(finger_count)]
                 goal_position = [self.contact_position[i] - sign[i] * let_go_margin for i in range(finger_count)]
@@ -1092,9 +1121,19 @@ class RobotController(object):
                     else:
                         check += 1
 
+            # Make sure fingers stopped
+            check = 0
+            while check < finger_count:
+                for i in range(finger_count):
+                    if abs(self.MC.pbm.get_present_position(self.robot.finger_ids[i])[0][0] - goal_position[i]) < 0.3:
+                        # This finger has come close enough to release point
+                        check += 1
+            print("Released.")
             # Put into IDLE if Full-release
-            if mode == 'F':
+            if release_mode == 'F':
                 self.idle()
+
+        time.sleep(0.5)
 
 
 if __name__ == '__main__':

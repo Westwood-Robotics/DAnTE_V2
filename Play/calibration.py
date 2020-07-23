@@ -93,7 +93,7 @@ def calibration_single(f, motor_controller):
 
     # Final check
     pos = motor_controller.pbm.get_present_position(m_id)[0][0]
-    if abs(pos) < 5:
+    if abs(pos) < 0.15:
         motor_controller.pbm.save_config(m_id)
         print("Finger homed.")
     else:
