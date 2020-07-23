@@ -15,5 +15,6 @@ from Settings.Constants_DAnTE import *
 THUMB = FingerDataStructure("THUMB", BEAR_THUMB, False)
 INDEX = FingerDataStructure("INDEX", BEAR_INDEX, False)
 INDEX_M = FingerDataStructure("INDEX_M", BEAR_INDEX_M, True)
+PALM = PalmDataStructure("PALM", DXL_PALM)
 
-DAnTE = RobotDataStructure("DAnTE", "/dev/ttyUSB1", 8000000, "/dev/ttyUSB1", 2000000, [INDEX, INDEX_M, THUMB])
+DAnTE = RobotDataStructure("DAnTE", "/dev/WR-UB021", 8000000, "/dev/TTL-USB", 2000000, PALM, [INDEX, INDEX_M, THUMB])

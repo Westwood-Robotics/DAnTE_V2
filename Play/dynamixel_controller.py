@@ -19,7 +19,7 @@ import pdb
 
 class DynamixelController(object):
 
-    def __init__(self, DXL_ID, port='/dev/ttyUSB0', BAUDRATE = 57600):
+    def __init__(self, DXL_ID, BAUDRATE=2000000, port='/dev/TTL-USB'):
 
         # Protocol version
         self.PROTOCOL_VERSION = 2.0  # See which protocol version is used in the Dynamixel
@@ -181,6 +181,18 @@ class DynamixelController(object):
         else:
             return True
 
+    def get_enable(self):
+        # Get torque enable status of Dynamixel
+        val, comm_result, error = self.packet_handler.read1ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_TORQUE_ENABLE)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return bool(val)
+
     def set_goal_position(self, goal_position):
         # Write goal position, value in radian
         goal_position = int(goal_position/POSITION_UNIT)
@@ -194,6 +206,19 @@ class DynamixelController(object):
         else:
             return True
 
+    def get_goal_position(self):
+        # Read present position, result in radian
+        goal_position, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_GOAL_POSITION)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            goal_position = goal_position*POSITION_UNIT
+            return goal_position
+
     def get_present_position(self):
         # Read present position, result in radian
         present_position, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_PRESENT_POSITION)
@@ -206,6 +231,19 @@ class DynamixelController(object):
         else:
             present_position = present_position*POSITION_UNIT
             return present_position
+
+    def get_present_velocity(self):
+        # Read present position, result in radian
+        present_velocity, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_PRESENT_VELOCITY)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            present_velocity = present_velocity*VELOCITY_UNIT
+            return present_velocity
 
     def set_profile_acceleration(self, val):
         """
@@ -246,18 +284,6 @@ class DynamixelController(object):
         else:
             return True
 
-    # TODO: what a troll is get load.
-    # def get_present_load(self):
-    #     # Read present load
-    #     present_load, comm_result, error = self.packet_handler.read2ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_PRESENT_LOAD)
-    #     if comm_result != COMM_SUCCESS:
-    #         print("%s" % self.packet_handler.getTxRxResult(comm_result))
-    #         return False
-    #     elif error != 0:
-    #         print("%s" % self.packet_handler.getRxPacketError(error))
-    #         return False
-    #     else:
-    #         return present_load  & 0b0000001111111111
 
 
 

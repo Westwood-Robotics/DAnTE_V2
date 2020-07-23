@@ -9,19 +9,14 @@ __status__ = "Prototype"
 import time
 import os
 import numpy as nmp
+from Play.dynamixel_controller import DynamixelController
 from Play.motor_controller import MotorController
 from Settings.Robot import *
 import pdb
+robot = DAnTE
 
-MC = MotorController(DAnTE.BEAR_baudrate, DAnTE.BEAR_port)
-m_id = 2
-MC.pbm.set_bulk_config((m_id, 'p_gain_position', IDLE_P,
-                              'i_gain_position', IDLE_I,
-                              'd_gain_position', IDLE_D))
-MC.set_mode(m_id, 'position')
-MC.torque_enable(m_id, 1)
-MC.pbm.set_goal_position((m_id, -0.5))
-
-
+DC = DynamixelController(robot.palm.motor_id, robot.DXL_baudrate, robot.DXL_port)
+data = DC.get_present_position()
+print(data)
 
 
