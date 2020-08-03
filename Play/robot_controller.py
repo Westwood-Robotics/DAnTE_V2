@@ -476,7 +476,8 @@ class RobotController(object):
                 running = True
                 while running:
                     try:
-                        if self.DC.get_present_velocity()<0.1:
+                        if self.DC.get_present_velocity()<0.05:
+                            time.sleep(0.25)
                             running = False
                     except KeyboardInterrupt:
                         print("User interrupted.")
@@ -788,8 +789,8 @@ class RobotController(object):
             # Enforced writing
 
             # Calculate HOLD_D according to final_strength
-            hold_p = HOLD_P_FACTOR * self.final_strength
-            hold_d = HOLD_D_FACTOR * self.final_strength
+            hold_p = round(HOLD_P_FACTOR * self.final_strength, 2)
+            hold_d = round(HOLD_D_FACTOR * self.final_strength, 2)
             if self.gesture == 'I':
                 # Pinch mode, use only index fingers
                 finger_count = 2
@@ -804,7 +805,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0] != hold_d:
+                    if round(self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0], 2) != hold_d:
                         self.MC.pbm.set_d_gain_force((self.robot.finger_ids[i], hold_d))
                     else:
                         check += 1
@@ -815,7 +816,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0] != hold_p:
+                    if round(self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0], 2) != hold_p:
                         self.MC.pbm.set_p_gain_force((self.robot.finger_ids[i], hold_p))
                     else:
                         check += 1
@@ -994,6 +995,8 @@ class RobotController(object):
         # - (L)et-go = release a little ,
         # - (F)ul-release = fingers reset
 
+        # TODO: if original stiffness is too low, it might not trigger full release end sign.
+
         # Check initialization
         if not self.robot.initialized:
             error = 3
@@ -1048,7 +1051,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0] != hold_d:
+                    if round(self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0], 2) != hold_d:
                         self.MC.pbm.set_d_gain_force((self.robot.finger_ids[i], hold_d))
                     else:
                         check += 1
@@ -1059,7 +1062,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0] != hold_p:
+                    if round(self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0], 2) != hold_p:
                         self.MC.pbm.set_p_gain_force((self.robot.finger_ids[i], hold_p))
                     else:
                         check += 1
