@@ -1,0 +1,2 @@
+DynamixelSDK: https://github.com/ROBOTIS-GIT/DynamixelSDK.git
+PyBEAR: https://github.com/dirtybrain/PyBEAR-WR_Rev.git
