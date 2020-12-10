@@ -5,7 +5,7 @@ Controller software for Westwood Robotics DAnTE V2
 
 #### 1. PyBEAR
 
-Please use PyBEAR from Westwood Robotics [PyBEAR-WR_Rev](https://github.com/dirtybrain/PyBEAR-WR_Rev), and make sure that you are on the develop branch. 
+Please use PyBEAR from Westwood Robotics [PyBEAR-WR](https://github.com/Westwood-Robotics/PyBEAR-WR), and make sure that you are on the develop branch. 
 
 Due to the differences in data return format, the current RoMeLa PyBEAR will **NOT** work with DAnTE V2.
 
