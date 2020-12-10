@@ -33,7 +33,12 @@ sudo udevadm control --reload
 
 ###### 0.1 Calibration
 
-Perform calibration before your first run after open-box, and then after every repair/maintemance, or as prompt during usage. To calibrate, cd into ./DAnTE_V2/Play/ directory and run calibration.py, then follow instructions as prompt. You can select to calibrate the whole hand or just one single finger.
+Perform calibration before your first run after open-box, and then after every repair/maintemance, or as prompt during usage. To calibrate, cd into ./DAnTE_V2/ directory and run calibration.py(assuming python3):
+```bash
+python3 -m Play.calibration
+```
+
+Then follow instructions as prompt. You can select to calibrate the whole hand or just one single finger.
 
 The calibration checks the integraty of the system and sets zero references for all actuators. Then it looks for the range of motion for all the fingers or the selected finger. Calibration results will be writen into ../Settings/initials.txt for initialization reference.
 
