@@ -528,7 +528,7 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
 if __name__ == '__main__':
     Robot = DAnTE
     BEAR_controller = MotorController(Robot.BEAR_baudrate, Robot.BEAR_port)
-    DXL_controller = DynamixelController(1)
+    DXL_controller = DynamixelController(1, Robot.DXL_port)
     user = input("Is this a (F)ull hand calibration or a (S)ingle finger calibration?")
     if user == 'F' or user == 'f':
         print("Starting full hand calibration...")
