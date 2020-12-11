@@ -49,6 +49,11 @@ BEAR_INDEX_M = 3
 DXL_PALM = 1
 
 # ------------------------------
+# Pinging
+# ------------------------------
+PING_TRAIL_COUNT =3
+
+# ------------------------------
 # BEAR MOTOR CHARACTERISTICS
 # ------------------------------
 
@@ -70,12 +75,12 @@ IQID_P = 0.02
 IQID_I = 0.02
 IQID_D = 0
 
-POS_P = 5
-POS_I = 0.01
-POS_D = 0
+POS_P = 3
+POS_I = 0.005
+POS_D = 1.5
 
 VEL_P = 0.4
-VEL_I = 0
+VEL_I = 0.005
 VEL_D = 0.0
 
 FOR_P = 1.5
@@ -85,8 +90,8 @@ FOR_D = 0.15
 # IDLE
 # TODO: experiment this
 # These are position gains used for IDLE mode
-IDLE_P = 2
-IDLE_I = 0.0005
+IDLE_P = 3
+IDLE_I = 0.002
 IDLE_D = 2
 
 
@@ -101,8 +106,8 @@ IDLE_D = 2
 # ------------------------------
 VEL_CAL = 1.5
 # VEL_RESET = 5
-IQ_CAL_DETECT = 0.6
-VEL_CAL_DETECT = 0.02
+IQ_CAL_DETECT = 0.65
+VEL_CAL_DETECT = 0.005
 
 # ------------------------------
 # INITIALIZATION

@@ -93,8 +93,7 @@ def calibration_single(f, motor_controller):
 
     # Final check
     pos = motor_controller.pbm.get_present_position(m_id)[0][0]
-    if abs(pos) < 5:
-        motor_controller.pbm.save_config(m_id)
+    if abs(pos) < 0.15:
         print("Finger homed.")
     else:
         print("Homing abnormal!") # TODO: throw exception
@@ -259,7 +258,6 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
         motor_controller.pbm.set_p_gain_velocity((f.motor_id, VEL_P))
         motor_controller.pbm.set_i_gain_velocity((f.motor_id, VEL_I))
         motor_controller.pbm.set_d_gain_velocity((f.motor_id, VEL_D))
-
     # Position
     # motor_controller.pbm.set_p_gain_position((m_id, 0.15))
 
@@ -269,7 +267,7 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
     else:
         # DXL not bypassed, automatic go to parallel.
         usr = input("Press enter to change to Pinch...")
-        DXL_controller.set_mode(3)  # Position mode
+        DXL_controller.set_mode("position")  # Position mode
         DXL_controller.torque_enable(1)  # Enable
         DXL_controller.set_goal_position(robot.palm.home+math.pi*7/15)
         time.sleep(0.5)
@@ -300,6 +298,7 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
             else:
                 goal_velocity = VEL_CAL
             motor_controller.pbm.set_goal_velocity((f.motor_id, goal_velocity))
+
         home_i = [0, 0, 0]
         detect_count = [0, 0, 0]
         print("Looking for home...")
@@ -395,7 +394,6 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
         m_id = f.motor_id
         pos = motor_controller.pbm.get_present_position(m_id)[0][0]
         if abs(pos) < 0.01:
-            motor_controller.pbm.save_config(m_id)
             print("%s homed." % f.name)
         else:
             print("%s homing abnormal!" % f.name)  # TODO: throw exception
@@ -425,6 +423,7 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
             else:
                 goal_velocity = -VEL_CAL
             motor_controller.pbm.set_goal_velocity((f.motor_id, goal_velocity))
+
         time.sleep(0.5)
         end_i = [0, 0, 0]
         detect_count = [0, 0, 0]
@@ -441,7 +440,7 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
 
                 for i in range(3):
                     if abs(vels[i]) < VEL_CAL_DETECT and abs(current[i]) > IQ_CAL_DETECT:
-                        if detect_count[i] > 5:
+                        if detect_count[i] > 20:
                             # TODO: check total travel value
                             print("%s end_pos reached." % robot.fingerlist[i].name)
                             robot.fingerlist[i].travel = motor_controller.pbm.get_present_position(robot.finger_ids[i])[0][0]
@@ -493,7 +492,7 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
                 position = [data[0][0] for data in status]
                 velocity = [data[0][1] for data in status]
                 for i in range(3):
-                    if abs(position[i]) < 0.02:
+                    if abs(position[i]) < 0.05:
                         running[i] = False
                         motor_controller.torque_enable(robot.finger_ids[i], 0)
                     if err[i] != 128:
@@ -510,25 +509,32 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
     for f in robot.fingerlist:
         data.append([f.name, f.motor_id, f.homing_offset, f.travel])
     data.append([robot.palm.name, robot.palm.motor_id, robot.palm.home, robot.palm.travel])
-    # Write file
-    filename = 'Settings/initials.txt'
-    filepath = os.path.join(str(Path(os.getcwd()).parent), filename)
-    initials = open(filepath, 'w')
-    for i in data:
-        initials.write(str(i)[1:-1])
-        initials.write('\n')
-    initials.close()
-    print("The following data has been written into initals.txt:")
-    for f in robot.fingerlist:
-        print("%s Motor ID: %d, homing_offset: % 8.2f, travel: % 8.2f"
-              % (f.name, f.motor_id, f.homing_offset, f.travel))
-    print("Full hand calibration complete.")
+
+    usr = input("Save Data? (y/n)")
+    if usr == "y" or usr == "Y":
+        # Write file
+        filename = 'Settings/initials.txt'
+        filepath = os.path.join(str(Path(os.getcwd()).parent), filename)
+        initials = open(filepath, 'w')
+        for i in data:
+            initials.write(str(i)[1:-1])
+            initials.write('\n')
+        initials.close()
+        print("The following data has been written into initals.txt:")
+        for f in robot.fingerlist:
+            print("%s Motor ID: %d, homing_offset: % 8.2f, travel: % 8.2f"
+                  % (f.name, f.motor_id, f.homing_offset, f.travel))
+            motor_controller.pbm.save_config(f.motor_id)
+        print("Config saved to BEAR.")
+        print("Full hand calibration complete.")
+    else:
+        print("Abort saving.")
 
 
 if __name__ == '__main__':
     Robot = DAnTE
     BEAR_controller = MotorController(Robot.BEAR_baudrate, Robot.BEAR_port)
-    DXL_controller = DynamixelController(1)
+    DXL_controller = DynamixelController(1, Robot.DXL_port)
     user = input("Is this a (F)ull hand calibration or a (S)ingle finger calibration?")
     if user == 'F' or user == 'f':
         print("Starting full hand calibration...")

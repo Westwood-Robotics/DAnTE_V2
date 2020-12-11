@@ -13,13 +13,14 @@ This module is used to communicate with the Dynamixel X series actuator on the D
 
 from dynamixel_sdk import *  # Uses Dynamixel SDK library
 from Settings.DXL_CONTROL_TABLE import *
+from Settings.Robot import *
 import math
 import pdb
 
 
 class DynamixelController(object):
 
-    def __init__(self, DXL_ID, BAUDRATE=2000000, port='/dev/TTL-USB'):
+    def __init__(self, DXL_ID, port, BAUDRATE=2000000):
 
         # Protocol version
         self.PROTOCOL_VERSION = 2.0  # See which protocol version is used in the Dynamixel
@@ -283,7 +284,6 @@ class DynamixelController(object):
             return False
         else:
             return True
-
 
 
 

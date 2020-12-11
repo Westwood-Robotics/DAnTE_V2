@@ -8,3 +8,4 @@
 
 # For DAnTE:
 SUBSYSTEM=="tty", ATTRS{interface}=="FT232R USB UART", SYMLINK="TTL-USB"
+SUBSYSTEM=="tty", ATTRS{product}=="WR-232H", SYMLINK="WR-232H"
