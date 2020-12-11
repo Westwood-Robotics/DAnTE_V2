@@ -267,7 +267,7 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
     else:
         # DXL not bypassed, automatic go to parallel.
         usr = input("Press enter to change to Pinch...")
-        DXL_controller.set_mode(3)  # Position mode
+        DXL_controller.set_mode("position")  # Position mode
         DXL_controller.torque_enable(1)  # Enable
         DXL_controller.set_goal_position(robot.palm.home+math.pi*7/15)
         time.sleep(0.5)
