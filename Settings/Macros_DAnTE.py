@@ -58,7 +58,8 @@ approach_command_max = 3
 # HOLD
 # ------------------------------
 delta_position = 0.15  # Move goal_position command inward by this amount at hold for firm contact
-grip_confirm = 1000  # Times a grip must be confirmed before triggering
+grip_confirm = 1000  # Number of times a grip must be confirmed before triggering, this is a rough method to filter
+# out faulty grip confirmation
 
 # ------------------------------
 # GRIP

@@ -33,6 +33,25 @@ THUMB = 1
 INDEX = 2
 INDEX_M = 3
 
+# ------------------------------
+# GEOMETRY CONSTANTS [INDEX, INDEX_M, THUMB]
+# ------------------------------
+a = [0, 0, -4.5]  # Actuator location in y
+b = [20.64, 20.64, 33.35]  # Actuator location in x
+h = 93.5  # Actuator location in z
+d = 113.4  # Linkage length
+l_1 = 21.5  # Actuation Link length
+l_2 = 10  # Middle Link drive arm length
+
+L_1 = 25  # Proximal phalanx length
+L_2 = 25  # Middle phalanx length
+L_3 = 25  # Distal phalanx length
+
+c = 27.1  # Coupling link length
+l_3 = 6  # Proximal link drive arm length
+l_4 = 6.5  # Distal link drive arm length
+
+alpha_0 = [3.3746, 0.2330, 3.3561]  # alpha value [INDEX, INDEX_M, THUMB] when fingers homed and parallel (theta = 90)
 
 # ==================================================
 # ==================================================
@@ -51,7 +70,7 @@ DXL_PALM = 1
 # ------------------------------
 # Pinging
 # ------------------------------
-PING_TRAIL_COUNT =3
+PING_TRAIL_COUNT = 6
 
 # ------------------------------
 # BEAR MOTOR CHARACTERISTICS
@@ -94,7 +113,17 @@ IDLE_P = 3
 IDLE_I = 0.002
 IDLE_D = 2
 
-
+# ------------------------------
+# EXTERNAL ENCODERS
+# ------------------------------
+# We only have SPI bus 0 available to us on the Pi
+BUS = 0
+MAX_SPI_SPEED = 2000  # Hz
+SPI_MODE = 0
+# Below are encoder pins on Pi
+ENC_THUMB = 22
+ENC_INDEX = 27
+ENC_INDEX_M = 17
 
 # ==================================================
 # ==================================================
@@ -146,4 +175,6 @@ default_hold_stiffness = 0.5
 # ------------------------------
 # GRIP
 # ------------------------------
+
+
 

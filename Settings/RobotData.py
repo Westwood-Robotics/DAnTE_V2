@@ -13,7 +13,7 @@ import math
 
 class FingerDataStructure(object):
 
-    def __init__(self, name, motor_id, mirrored):
+    def __init__(self, name, motor_id, mirrored, encoder=None):
         # Finger info
         self.name = name
         self.motor_id = motor_id
@@ -22,6 +22,9 @@ class FingerDataStructure(object):
         self.travel = 0  # Total travel of BEAR for finger to close
         self.initialized = False  # Finger has been initialized
         self.contact = False  # Object contact status
+        self.encoder = encoder  # Encoder pin# on Pi
+        self.encoder_offset = -1  # Offset value for the encoder when finger is fully open
+        self.angles = [0, 0, 0, 0]  # Phalanx angles, [alpha, beta, gamma, delta]
 
 
 class PalmDataStructure(object):
@@ -34,6 +37,8 @@ class PalmDataStructure(object):
         self.travel = math.pi/2  # Total travel of BEAR for INDEX fingers to turn from parallel to pinch
         self.home = 0  # Home position for Dynamixel so that index fingers are in parallel
         self.initialized = False  # Palm has been initialized
+        self.gesture = None  # Hand gesture status
+        self.angle = 0  # theta
         # Sensors to be added.
 
 
@@ -49,21 +54,22 @@ class RobotDataStructure(object):
 
         if palm is None:
             palm = PalmDataStructure("PALM", DXL_PALM)
-        if fingerlist is None:
+        if fingerlist is None:  # If no finger specified, assume there is only a THUMB
             fingerlist = [FingerDataStructure("THUMB", BEAR_THUMB, False)]
 
         self.palm = palm
         self.fingerlist = fingerlist
 
-
         self.finger_count = len(self.fingerlist)  # number of fingers
         self.finger_ids = []
+        self.encoders = []
         for f in fingerlist:
             self.finger_ids.append(f.motor_id)
+            self.encoders.append(f.encoder)  # Create a cluster of encoder pins
 
         self.initialized = False  # Full hand has been initialized
         self.contact = False  # Object contact status
-        self.booted = False
+        self.booted = False  # System has booted
 
 
 

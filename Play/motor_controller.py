@@ -255,7 +255,7 @@ class MotorController(object):
 
     def get_present_status_all(self):
         """
-        Get present position of all fingers
+        Get present status of all fingers
         """
         # TODO: replace with bulk_comm function
         # info_all = self.pbm.bulk_read((BEAR_THUMB, BEAR_INDEX, BEAR_INDEX),
@@ -267,7 +267,7 @@ class MotorController(object):
 
     def get_present_status_index(self):
         """
-        Get present position of all fingers
+        Get present status of all fingers
         """
         # TODO: replace with bulk_comm function
         # info_all = self.pbm.bulk_read((BEAR_THUMB, BEAR_INDEX, BEAR_INDEX),
@@ -278,12 +278,24 @@ class MotorController(object):
 
     def get_present_status(self, m_id):
         """
-        Get present position of all fingers
+        Get present status of all fingers
         """
         # TODO: replace with bulk_comm function
         info = self.pbm.get_bulk_status((m_id, 'present_position', 'present_velocity', 'present_iq'))
 
         return info
+
+    def get_present_position_all(self):
+        """
+        Get present position of all fingers
+        """
+        # TODO: replace with bulk_comm function
+        # info_all = self.pbm.bulk_read((BEAR_THUMB, BEAR_INDEX, BEAR_INDEX),
+        #                              ('present_position', 'present_velocity', 'present_iq'))
+        info_all = self.pbm.get_bulk_status((BEAR_INDEX, 'present_position'),
+                                            (BEAR_INDEX_M, 'present_position'),
+                                            (BEAR_THUMB, 'present_position'))
+        return info_all
 
     def save_congif_all(self):
         """
