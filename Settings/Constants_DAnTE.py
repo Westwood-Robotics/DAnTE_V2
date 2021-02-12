@@ -28,10 +28,10 @@ PI = 3.1415926535897932
 # ------------------------------
 # JOINT NAMES AND JOINT NO
 # ------------------------------
-PALM = 0
-THUMB = 1
-INDEX = 2
-INDEX_M = 3
+# PALM = 0
+# THUMB = 1
+# INDEX = 2
+# INDEX_M = 3
 
 # ------------------------------
 # GEOMETRY CONSTANTS [INDEX, INDEX_M, THUMB]
