@@ -401,7 +401,7 @@ class RobotController(object):
             time.sleep(0.2)
             ext_reading = self.ext_enc.read_angle()
             self.ext_enc.release()
-            for idx, finger in self.robot.fingerlist:
+            for idx, finger in enumerate(self.robot.fingerlist):
                 if 0.18 < abs(ext_reading[idx] - finger.encoder_offset) < 6.1:
                     # External encoder reading differs from the record for too much
                     ext_enc_error = True
@@ -1189,7 +1189,7 @@ class RobotController(object):
         ext_reading = self.ext_enc.read_angle()
         self.ext_enc.release()
         # Update all joint angles
-        for idx, finger in self.robot.fingerlist:
+        for idx, finger in enumerate(self.robot.fingerlist):
             finger.angles[0] = alpha_0[idx] - present_pos # Get alpha from present position
             finger.angles[1] = ext_reading[idx] - finger.encoder_offset + math.pi/3  # Get beta from external encoders
             # Get [gamma, delta] from present position
