@@ -22,8 +22,11 @@ Modify 00-WR_DAnTE.rules accordingly, if needed.
 Move 00-WR_DAnTE.rules file into /etc/udev/rules.d/ with 'sudo cp'
 Reload the rules
 ```bash
-sudo udevadm control --reload
-```
+sudo udevadm control --reload```
+
+#### 4. SciPy
+
+The SciPy package is required for kinematics. Install with pip before playing with DAnTE. 
 
 ## Work with DAnTE
 
