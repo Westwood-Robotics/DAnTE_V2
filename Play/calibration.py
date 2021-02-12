@@ -228,7 +228,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
     if bypass_DXL:
         DXL_controller = None
     else:
-        DXL_controller = DynamixelController(robot.palm.motor_id, robot.DXL_baudrate, robot.DXL_port)
+        DXL_controller = DynamixelController(robot.palm.motor_id, robot.DXL_port, robot.DXL_baudrate)
 
     # When debug, you might want to bypass external encoders
     if bypass_ext_enc:

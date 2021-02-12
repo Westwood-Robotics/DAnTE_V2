@@ -62,7 +62,7 @@ class RobotController(object):
         if self.bypass_DXL:
             self.DC = None
         else:
-            self.DC = DynamixelController(self.robot.palm.motor_id, self.robot.DXL_baudrate, self.robot.DXL_port)
+            self.DC = DynamixelController(self.robot.palm.motor_id, self.robot.DXL_port, self.robot.DXL_baudrate)
 
         # You can also bypass external encoders
         self.bypass_ext_enc = bypass_ext_enc
