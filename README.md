@@ -22,11 +22,17 @@ Modify 00-WR_DAnTE.rules accordingly, if needed.
 Move 00-WR_DAnTE.rules file into /etc/udev/rules.d/ with 'sudo cp'
 Reload the rules
 ```bash
-sudo udevadm control --reload```
+sudo udevadm control --reload
+```
 
 #### 4. SciPy
 
 The SciPy package is required for kinematics. Install with pip before playing with DAnTE. 
+
+#### 5. WiringPi
+
+The WiringPi package is required for reading external encoders. 
+It should be WiringPi is PRE-INSTALLED with standard Raspbian systems. Otherwise, refer to http://wiringpi.com/download-and-install/
 
 ## Work with DAnTE
 
