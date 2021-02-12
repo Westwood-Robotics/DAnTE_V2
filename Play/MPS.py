@@ -10,7 +10,7 @@ __status__ = "Prototype"
 
 import time
 import os
-import math
+import numpy
 import spidev
 import wiringpi
 from Settings.MPS_CONTROL_TABLE import *
@@ -44,7 +44,7 @@ class MPS_Encoder(object):  # Handles a single encoder
         # Set SPI speed and mode
         spi.max_speed_hz = self.max_speed
         spi.mode = self.mode
-        print("Device connected.")
+        print("SPI device connected.")
 
     def read_angle(self):
         # Read angle from device
@@ -80,7 +80,7 @@ class MPS_Encoder(object):  # Handles a single encoder
         if self.gpio:
             wiringpi.digitalWrite(self.cs, 1)  # Set ChipSelect GPIO as HIGH
         spi.close()
-        print("Device released.")
+        print("SPI device released.")
 
     def read_reg(self, reg_name):
         # Read from a register
@@ -158,10 +158,10 @@ class MPS_Encoder_Cluster(object):  # Handles a cluster of encoders via utilizin
 
     def connect(self):
         # Open a connection to a specific bus
-        spi.open(self.chip_bus, 2)  # Using GPIO pins, thus set cs as something not existing
+        spi.open(self.chip_bus, 0)  # Using GPIO pins tho
         spi.max_speed_hz = self.max_speed
         spi.mode = self.mode
-        print("Device connected.")
+        print("SPI devices connected.")
 
     def read_angle(self):
         # Read angle from all devices
@@ -171,8 +171,7 @@ class MPS_Encoder_Cluster(object):  # Handles a cluster of encoders via utilizin
             wiringpi.digitalWrite(val, 1)  # Set target ChipSelect GPIO as HIGH
             high_byte = data[0] << 8
             low_byte = data[1]
-            self.angles[idx] = ((high_byte + low_byte) >> 4)*math.pi/2048  # Get rid of last 4 bit and convert to radian
-
+            self.angles[idx] = (high_byte + low_byte) >> 4  # Get rid of last 4 bit whatever
         return self.angles
 
     def release(self):
@@ -180,6 +179,6 @@ class MPS_Encoder_Cluster(object):  # Handles a cluster of encoders via utilizin
         spi.close()
         for i in self.cs:
             wiringpi.digitalWrite(i, 1)  # Set all ChipSelect GPIO as HIGH
-        print("Device released.")
+        print("SPI devices released.")
 
 

@@ -430,7 +430,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
         time.sleep(0.5)
         data = ext_enc.read_angle()
         ext_enc.release()
-        for idx, f in robot.fingerlist:
+        for idx, f in enumerate(robot.fingerlist):
             f.encoder_offset = data[idx]
 
     # Get end_pos
@@ -546,7 +546,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
     if usr == "y" or usr == "Y":
         # Write file
         filename = 'Settings/initials.txt'
-        filepath = os.path.join(str(Path(os.getcwd()).parent), filename)
+        filepath = os.path.join(str(Path(os.getcwd())), filename)
         initials = open(filepath, 'w')
         for i in data:
             initials.write(str(i)[1:-1])
