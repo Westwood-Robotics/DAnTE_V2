@@ -242,14 +242,53 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
     error = 0b0000  # 4 bit respectively for INDEX, INDEX_M, THUMB, Dynamixel
 
     # Ping all motors
+    # Specify PING_TRAIL_COUNT in Constants_DAnTE
+    # BEAR:
     for idx, f in enumerate(robot.fingerlist):
-        if not bool(motor_controller.pbm.ping(f.motor_id)):
-            print("%s offline." % f.name)
-            error = error | (1 << idx)
+        trail = 0
+        check = False
+        print("Pinging %s..." % f.name)
+        while not check:
+            if not bool(motor_controller.pbm.ping(f.motor_id)):
+                trail += 1
+                if trail > int(PING_TRAIL_COUNT / 2):
+                    # WARNING about bad communication
+                    print("WARNING: %s BEAR communication intermittent." % f.name)
+                elif trail > PING_TRAIL_COUNT:
+                    # Tried PING_TRAIL_COUNT times and still no luck:
+                    print("ERROR: %s offline." % f.name)
+                    error = error | (1 << idx)
+                    break
+                else:
+                    # Retry in 0.5s
+                    print("Retry in 0.5 second.")
+                    time.sleep(0.5)
+            else:
+                # Ping succeed
+                check = True
+    # DXL:
     if not bypass_DXL:
-        if not DXL_controller.ping():
-            print("Palm actuator offline.")
-            error = error | (1 << 3)
+        trail = 0
+        check = False
+        print("Pinging Palm actuator...")
+        while not check:
+            if not DXL_controller.ping():
+                trail += 1
+                if trail > int(PING_TRAIL_COUNT / 2):
+                    # WARNING about bad communication
+                    print("WARNING: Palm actuator communication intermittent.")
+                if trail > PING_TRAIL_COUNT:
+                    # Tried PING_TRAIL_COUNT times and still no luck:
+                    print("ERROR: Palm actuator offline.")
+                    error = error | (1 << 3)
+                    break
+                else:
+                    # Retry in 0.5s
+                    print("Retry in 0.5 second.")
+                    time.sleep(0.5)
+            else:
+                # Ping succeed
+                check = True
 
     if error:
         print("One or more actuators offline. Exiting...")

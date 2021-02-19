@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/DAnTE_V2.iml" filepath="$PROJECT_DIR$/.idea/DAnTE_V2.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../PySPI/.idea/PySPI.iml" filepath="$PROJECT_DIR$/../PySPI/.idea/PySPI.iml" />
     </modules>
   </component>
 </project>

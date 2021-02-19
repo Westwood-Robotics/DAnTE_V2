@@ -103,6 +103,7 @@ class RobotController(object):
         error = 0b0000  # 4 bit respectively for INDEX, INDEX_M, THUMB, Dynamixel, 0b10000 for overall error.
 
         # Ping all motors
+        # Specify PING_TRAIL_COUNT in Constants_DAnTE
         # BEAR:
         for idx, f in enumerate(self.robot.fingerlist):
             trail = 0
@@ -1179,7 +1180,6 @@ class RobotController(object):
         time.sleep(0.5)
 
     def update_angles(self):
-        # TODO: Finish this
         # Update finger joint angles
         data = self.MC.get_present_position_all()
         present_pos = [i[0] for i in data]  # [Index, Index_M, THUMB]
