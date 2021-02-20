@@ -1,6 +1,8 @@
 # DAnTE_V2
 Controller software for Westwood Robotics DAnTE V2
 
+Firmware version 0.1.0
+
 ## Hardware
 #### 1. DAnTE_V2
 
