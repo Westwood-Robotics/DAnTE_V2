@@ -416,6 +416,8 @@ class RobotController(object):
                     ext_enc_error = True
                     abnormal[idx] = abnormal[idx] | 0b10000
                     print("%s external encoder abnormal." % finger.name)
+                    print("ext_reading: %f" % ext_reading[idx])
+                    print("encoder_offset: %f" % finger.encoder_offset)
 
         # 7. Finger initialization complete
         # Disable and finish
