@@ -1,6 +1,8 @@
 # DAnTE_V2
 Controller software for Westwood Robotics DAnTE V2
 
+Firmware version 0.1.0
+
 ## Hardware
 #### 1. DAnTE_V2
 
@@ -186,14 +188,12 @@ And error code will be generated if there is any thing wrong during these operat
 
 Tune DAnTE via Macros_DAnTE, rarely need to modify Contants_DAnTE.
 
+## Beta Functions
+
+- Full hand kinematics and object size/shape estimation after grabbing.
 
 ## Future work
 
 - Interactive operation synced with oeprator with force
 
-- Raspberry Zero integration, and add a higher level
-
-- Full hand kinematics and object size/shape estimation after grabbing.
-
-- Reboot and shutdown functions
 
