@@ -14,6 +14,12 @@ from Play.dynamixel_controller import DynamixelController
 from Settings.Robot import *
 import matplotlib.pyplot as plt
 import math
+
+if EXTERNAL_ENC:
+    # Only import the following when EXTERNAL_ENC is True as wiringpi and spidev are required.
+    import Forward_Kinematics.forward_kin as FK
+    from Play.MPS import MPS_Encoder_Cluster
+
 import pdb
 
 
@@ -47,7 +53,7 @@ def read_initials():
 
 class RobotController(object):
 
-    def __init__(self, robot=None, bypass_DXL=False):
+    def __init__(self, robot=None, bypass_DXL=False, bypass_ext_enc=False):
         if robot is None:
             print("Robot set to DAnTE by default")
             robot = RobotDataStructure("DAnTE", "/dev/ttyUSB0", 8000000, "/dev/ttyUSB1", 2000000, PALM, [INDEX, INDEX_M, THUMB])
@@ -60,9 +66,21 @@ class RobotController(object):
         if self.bypass_DXL:
             self.DC = None
         else:
-            self.DC = DynamixelController(self.robot.palm.motor_id, self.robot.DXL_baudrate, self.robot.DXL_port)
+            self.DC = DynamixelController(self.robot.palm.motor_id, self.robot.DXL_port, self.robot.DXL_baudrate)
 
-        self.gesture = None
+        if not EXTERNAL_ENC:
+            # Force to bypass external encoders when EXTERNAL_ENC=None
+            bypass_ext_enc = True
+
+        # When debug, you might want to bypass external encoders
+        self.bypass_ext_enc = bypass_ext_enc
+        if self.bypass_ext_enc:
+            self.ext_enc = None
+        else:
+            self.ext_enc = MPS_Encoder_Cluster("MA310", BUS, robot.encoders, MAX_SPI_SPEED, SPI_MODE)
+            # self.robot.DXL_port)
+
+        # self.gesture = None
         self.mode = None
 
         self.approach_speed = None
@@ -74,13 +92,11 @@ class RobotController(object):
         self.contact_position = [0, 0, 0]
         self.balance_factor = [1, 1, 1]  # Factor for force balance between fingers, update when change gesture
 
-        self.ascii_art = True
         self.welcome_msg()
 
         # self.start_robot()
 
     def welcome_msg(self):
-        if self.ascii_art:
             print("=========== DAnTE version 2.0.0 -- Last Updated 2020.06.24 ===")
             print("==============================================================")
 
@@ -95,48 +111,57 @@ class RobotController(object):
         error = 0b0000  # 4 bit respectively for INDEX, INDEX_M, THUMB, Dynamixel, 0b10000 for overall error.
 
         # Ping all motors
+        # Specify PING_TRAIL_COUNT in Constants_DAnTE
         # BEAR:
         for idx, f in enumerate(self.robot.fingerlist):
-            retry = 0
+            trail = 0
             check = False
+            print("Pinging %s..." % f.name)
             while not check:
                 if not bool(self.MC.pbm.ping(f.motor_id)):
-                    retry += 1
-                    if retry > PING_TRAIL_COUNT:
+                    trail += 1
+                    if trail > int(PING_TRAIL_COUNT / 2):
+                        # WARNING about bad communication
+                        print("WARNING: %s BEAR communication intermittent." % f.name)
+                    elif trail > PING_TRAIL_COUNT:
                         # Tried PING_TRAIL_COUNT times and still no luck:
-                        print("%s offline." % f.name)
+                        print("ERROR: %s offline." % f.name)
                         error = error | (1 << idx)
                         break
                     else:
                         # Retry in 0.5s
-                        print("%s offline. Retry in 0.5 second." % f.name)
+                        print("Retry in 0.5 second.")
                         time.sleep(0.5)
                 else:
                     # Ping succeed
                     check = True
         # DXL:
         if not self.bypass_DXL:
-            retry = 0
+            trail = 0
             check = False
+            print("Pinging Palm actuator...")
             while not check:
                 if not self.DC.ping():
-                    retry += 1
-                    if retry > PING_TRAIL_COUNT:
+                    trail += 1
+                    if trail > int(PING_TRAIL_COUNT / 2):
+                        # WARNING about bad communication
+                        print("WARNING: Palm actuator communication intermittent.")
+                    if trail > PING_TRAIL_COUNT:
                         # Tried PING_TRAIL_COUNT times and still no luck:
-                        print("Palm actuator offline.")
+                        print("ERROR: Palm actuator offline.")
                         error = error | (1 << 3)
                         break
                     else:
                         # Retry in 0.5s
-                        print("Palm actuator offline. Retry in 0.5 second.")
+                        print("Retry in 0.5 second.")
                         time.sleep(0.5)
                 else:
                     # Ping succeed
                     check = True
 
         # Read initials, fact check and populate robot object
-        init_data = read_initials()  # init_data = [['FINGER', motor_id, homing_offset, travel]...]
-        if not self.bypass_DXL and len(init_data)<4:
+        init_data = read_initials()  # init_data = [['FINGER', motor_id, homing_offset, travel, encoder_offset]...]
+        if not self.bypass_DXL and len(init_data) < 4:
             print("Length of init_data is too short. Exiting...")
             error = 0b10000
             return error
@@ -151,6 +176,8 @@ class RobotController(object):
             else:
                 f.homing_offset = init_data[idx][2]
                 f.travel = init_data[idx][3]
+                if not self.bypass_ext_enc:
+                    f.encoder_offset = init_data[idx][4]
         if not self.bypass_DXL:
             if self.robot.palm.name != init_data[3][0]:
                 print("init_data.name does not match for %s." % self.robot.palm.name)
@@ -214,7 +241,6 @@ class RobotController(object):
     def initialization(self):
 
         # Full hand initialization.
-
         # Check if booted
         if self.robot.booted:
             pass
@@ -250,10 +276,11 @@ class RobotController(object):
 
         abnormal = [0, 0, 0]
         # Finger abnormal code:
-        # 1000 Failed to travel to home
-        # 0100 Failed to fully close
-        # 0010 Position out of range
-        # 0001 home_offset abnormal
+        # 10000 External encoder offset discrepancy
+        # 01000 Failed to travel to home
+        # 00100 Failed to fully close
+        # 00010 Position out of range
+        # 00001 home_offset abnormal
 
         # 1. Compare home_offset
         for i in range(3):
@@ -377,7 +404,22 @@ class RobotController(object):
                 running = [0]
                 print("User interrupted.")
 
-        # 6. Finger initialization complete
+        # 6. Check external encoder reading and offset
+        if not self.bypass_ext_enc:
+            self.ext_enc.connect()
+            time.sleep(0.2)
+            ext_reading = self.ext_enc.read_angle()
+            self.ext_enc.release()
+            for idx, finger in enumerate(self.robot.fingerlist):
+                if 0.18 < abs(ext_reading[idx] - finger.encoder_offset) < 6.1:
+                    # External encoder reading differs from the record for too much
+                    ext_enc_error = True
+                    abnormal[idx] = abnormal[idx] | 0b10000
+                    print("%s external encoder abnormal." % finger.name)
+                    print("ext_reading: %f" % ext_reading[idx])
+                    print("encoder_offset: %f" % finger.encoder_offset)
+
+        # 7. Finger initialization complete
         # Disable and finish
         self.set_robot_enable(0)
         if sum(abnormal):
@@ -402,6 +444,8 @@ class RobotController(object):
     # Control grab and release motion of self.robot
 
     def change_gesture(self, new_gesture):
+        # TODO: Create shallow_release function so that the index fingers release to slightly away from home for
+        #  gesture change, then fully release.
         # Change the gesture of DAnTE
         # Will Fully release first.
 
@@ -418,7 +462,8 @@ class RobotController(object):
             print("WARNING: Robot not enabled, enabling now.")
             self.set_robot_enable(1)
 
-        if self.gesture == new_gesture:
+        # if self.gesture == new_gesture:
+        if self.robot.palm.gesture == new_gesture:
             # No need to change
             print('Already in gesture %s.' % new_gesture)
             return True
@@ -440,8 +485,9 @@ class RobotController(object):
                     usr = input("Bypass_DXL, please manually change DAnTE to Tripod mode, and press enter.")
                 else:
                     DXL_goal_pos = self.robot.palm.home+math.pi/3
+                    self.robot.palm.angle = math.pi/3
                     self.DC.set_goal_position(DXL_goal_pos)
-                self.gesture = 'Y'
+                # self.gesture = 'Y'
                 # Update balance_factor
                 self.balance_factor = [1, 1, 1]
 
@@ -452,9 +498,10 @@ class RobotController(object):
                     usr = input("Bypass_DXL, please manually change DAnTE to Pinch mode, and press enter.")
                 else:
                     DXL_goal_pos = self.robot.palm.home + math.pi / 2 * (15 / 16)
+                    self.robot.palm.angle = math.pi / 2
                     self.DC.set_goal_position(DXL_goal_pos)
                     time.sleep(0.5)
-                self.gesture = 'I'
+                # self.gesture = 'I'
                 # Update balance_factor
                 self.balance_factor = [1, 1, 1]
                 # Set THUMB in IDLE
@@ -466,8 +513,9 @@ class RobotController(object):
                     usr = input("Bypass_DXL, please manually change DAnTE to Parallel mode, and press enter.")
                 else:
                     DXL_goal_pos = self.robot.palm.home
+                    self.robot.palm.angle = 0
                     self.DC.set_goal_position(DXL_goal_pos)
-                self.gesture = 'P'
+                # self.gesture = 'P'
                 # Update balance_factor
                 self.balance_factor = [1, 1, 2]
 
@@ -483,6 +531,8 @@ class RobotController(object):
                         print("User interrupted.")
                         running = False
                         return False
+            # Update robot.palm
+            self.robot.palm.gesture = new_gesture
             return True
 
     def set_approach_stiffness(self):
@@ -491,17 +541,17 @@ class RobotController(object):
         force_p = self.approach_stiffness
         force_d = 0.1 * force_p
 
-        if self.gesture == 'I':
+        if self.robot.palm.gesture == 'I':
             # Leave THUMB along if in pinch mode
             # Change the force PID of INDEX fingers
             self.MC.pbm.set_p_gain_force((BEAR_INDEX, force_p), (BEAR_INDEX_M, force_p))
             self.MC.pbm.set_d_gain_force((BEAR_INDEX, force_d), (BEAR_INDEX_M, force_d))
-        elif self.gesture == 'Y' or self.gesture == 'P':
+        elif self.robot.palm.gesture == 'Y' or self.robot.palm.gesture == 'P':
             # Change the force PID of all fingers
             self.MC.pbm.set_p_gain_force((BEAR_THUMB, force_p), (BEAR_INDEX, force_p), (BEAR_INDEX_M, force_p))
             self.MC.pbm.set_d_gain_force((BEAR_THUMB, force_d), (BEAR_INDEX, force_d), (BEAR_INDEX_M, force_d))
         else:
-            print("Invalid input.")  # TODO: Throw exception
+            print("Invalid gesture status.")  # TODO: Throw exception
             return False
         print("Approach Stiffness set.")
         return True
@@ -577,7 +627,7 @@ class RobotController(object):
         # Set iq_max
         for f_id in self.robot.finger_ids:
             self.MC.pbm.set_limit_iq_max((f_id, self.max_iq))
-        if self.gesture == 'P':
+        if self.robot.palm.gesture == 'P':
             # Double THUMB iq_limit in Parallel mode
             self.MC.pbm.set_limit_iq_max((THUMB.motor_id, 2 * self.max_iq))
             # Enforce writing
@@ -627,7 +677,7 @@ class RobotController(object):
                     previous_time = present_time
 
                     # Collect status
-                    if self.gesture == 'I':
+                    if self.robot.palm.gesture == 'I':
                         status = self.MC.get_present_status_index()
                         finger_count = 2
                     else:
@@ -791,7 +841,7 @@ class RobotController(object):
             # Calculate HOLD_D according to final_strength
             hold_p = round(HOLD_P_FACTOR * self.final_strength, 2)
             hold_d = round(HOLD_D_FACTOR * self.final_strength, 2)
-            if self.gesture == 'I':
+            if self.robot.palm.gesture == 'I':
                 # Pinch mode, use only index fingers
                 finger_count = 2
             else:
@@ -847,7 +897,7 @@ class RobotController(object):
             detect_count = [grip_confirm, grip_confirm, grip_confirm]
             iq_comp_goal = self.final_strength
             # Collect status
-            if self.gesture == 'I':
+            if self.robot.palm.gesture == 'I':
                 # Pinch mode, use only index fingers
                 status = self.MC.get_present_status_index()
                 finger_count = 2
@@ -891,7 +941,7 @@ class RobotController(object):
                     previous_time = present_time
 
                     # Collect status
-                    if self.gesture == 'I':
+                    if self.robot.palm.gesture == 'I':
                         status = self.MC.get_present_status_index()
                     else:
                         status = self.MC.get_present_status_all()
@@ -995,7 +1045,8 @@ class RobotController(object):
         # - (L)et-go = release a little ,
         # - (F)ul-release = fingers reset
 
-        # TODO: if original stiffness is too low, it might not trigger full release end sign.
+        # TODO: if original stiffness is too low, it might not trigger full release end sign, thus use separate
+        #  release PID
 
         # Check initialization
         if not self.robot.initialized:
@@ -1037,7 +1088,7 @@ class RobotController(object):
             # Calculate HOLD_D according to hold_stiffness
             hold_p = HOLD_P_FACTOR * hold_stiffness
             hold_d = HOLD_D_FACTOR * hold_stiffness
-            if self.gesture == 'I':
+            if self.robot.palm.gesture == 'I':
                 # Pinch mode, use only index fingers
                 finger_count = 2
             else:
@@ -1096,7 +1147,7 @@ class RobotController(object):
                 f.contact = False
             self.robot.contact = False
 
-            if self.gesture == 'I':
+            if self.robot.palm.gesture == 'I':
                 # Pinch mode, use only index fingers
                 finger_count = 2
             else:
@@ -1138,9 +1189,25 @@ class RobotController(object):
 
         time.sleep(0.5)
 
+    def update_angles(self):
+        # Update finger joint angles
+        data = self.MC.get_present_position_all()
+        present_pos = [i[0] for i in data]  # [Index, Index_M, THUMB]
+        # Get ext_enc reading:
+        self.ext_enc.connect()
+        time.sleep(0.2)
+        ext_reading = self.ext_enc.read_angle()
+        self.ext_enc.release()
+        # Update all joint angles
+        for idx, finger in enumerate(self.robot.fingerlist):
+            finger.angles[0] = alpha_0[idx] - present_pos # Get alpha from present position
+            finger.angles[1] = ext_reading[idx] - finger.encoder_offset + math.pi/3  # Get beta from external encoders
+            # Get [gamma, delta] from present position
+            finger.angles[2] = FK.solver(finger.name, self.robot.palm.angle, finger.angles[0], finger.angles[1])
+
 
 if __name__ == '__main__':
     rc = RobotController(robot=DAnTE)
     rc.start_robot()
-    rc.initialization_full()
+    rc.initialization()
     rc.grab('P', 'H', approach_speed=1.8, approach_stiffness=0.35, detect_current=0.3, max_iq=0.25, final_strength=2)

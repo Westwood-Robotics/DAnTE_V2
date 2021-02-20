@@ -12,9 +12,9 @@ from Settings.RobotData import *
 from Settings.Macros_DAnTE import *
 from Settings.Constants_DAnTE import *
 
-THUMB = FingerDataStructure("THUMB", BEAR_THUMB, False)
-INDEX = FingerDataStructure("INDEX", BEAR_INDEX, False)
-INDEX_M = FingerDataStructure("INDEX_M", BEAR_INDEX_M, True)
+THUMB = FingerDataStructure("THUMB", BEAR_THUMB, False, ENC_THUMB)
+INDEX = FingerDataStructure("INDEX", BEAR_INDEX, False, ENC_INDEX)
+INDEX_M = FingerDataStructure("INDEX_M", BEAR_INDEX_M, True, ENC_INDEX_M)
 PALM = PalmDataStructure("PALM", DXL_PALM)
 
 DAnTE = RobotDataStructure("DAnTE", "/dev/UB000B", 8000000, "/dev/WR-232H", 2000000, PALM, [INDEX, INDEX_M, THUMB])

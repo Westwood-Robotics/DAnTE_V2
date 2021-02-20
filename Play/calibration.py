@@ -13,6 +13,12 @@ from pathlib import Path
 from Play.motor_controller import MotorController
 from Play.dynamixel_controller import DynamixelController
 from Settings.Robot import *
+from Settings.Constants_DAnTE import *
+
+if EXTERNAL_ENC:
+    # Only import the following when EXTERNAL_ENC is True as wiringpi and spidev are required.
+    from Play.MPS import MPS_Encoder_Cluster
+
 import pdb
 
 # -----------------------------
@@ -22,6 +28,7 @@ import pdb
 def calibration_single(f, motor_controller):
     # Single finger calibration.
     # Specify the finger with f
+    # TODO: if encoder is not None, read encoder initials
 
     m_id = f.motor_id
     motor_controller.init_driver(m_id)
@@ -96,7 +103,7 @@ def calibration_single(f, motor_controller):
     if abs(pos) < 0.15:
         print("Finger homed.")
     else:
-        print("Homing abnormal!") # TODO: throw exception
+        print("Homing abnormal!")  # TODO: throw exception
 
     print("home_offset recorded as: % 8.2f" % home_offset)
     print("Current Position:%5.2f" % pos)
@@ -217,20 +224,78 @@ def calibration_single(f, motor_controller):
     print("Finger calibration complete.")
 
 
-def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
+def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
     # Calibrate the whole hand.
+
+    # When debug, you might want to bypass Dynamixel
+    if bypass_DXL:
+        DXL_controller = None
+    else:
+        DXL_controller = DynamixelController(robot.palm.motor_id, robot.DXL_port, robot.DXL_baudrate)
+
+    if not EXTERNAL_ENC:
+        # Force to bypass external encoders when EXTERNAL_ENC=None
+        bypass_ext_enc = True
+
+    # When debug, you might want to bypass external encoders
+    if bypass_ext_enc:
+        ext_enc = None
+    else:
+        ext_enc = MPS_Encoder_Cluster("MA310", BUS, robot.encoders, MAX_SPI_SPEED, SPI_MODE)
+
+    motor_controller = MotorController(robot.BEAR_baudrate, robot.BEAR_port)
+
     # Ping all actuators at the beginning
     error = 0b0000  # 4 bit respectively for INDEX, INDEX_M, THUMB, Dynamixel
 
     # Ping all motors
+    # Specify PING_TRAIL_COUNT in Constants_DAnTE
+    # BEAR:
     for idx, f in enumerate(robot.fingerlist):
-        if not bool(motor_controller.pbm.ping(f.motor_id)):
-            print("%s offline." % f.name)
-            error = error | (1 << idx)
+        trail = 0
+        check = False
+        print("Pinging %s..." % f.name)
+        while not check:
+            if not bool(motor_controller.pbm.ping(f.motor_id)):
+                trail += 1
+                if trail > int(PING_TRAIL_COUNT / 2):
+                    # WARNING about bad communication
+                    print("WARNING: %s BEAR communication intermittent." % f.name)
+                elif trail > PING_TRAIL_COUNT:
+                    # Tried PING_TRAIL_COUNT times and still no luck:
+                    print("ERROR: %s offline." % f.name)
+                    error = error | (1 << idx)
+                    break
+                else:
+                    # Retry in 0.5s
+                    print("Retry in 0.5 second.")
+                    time.sleep(0.5)
+            else:
+                # Ping succeed
+                check = True
+    # DXL:
     if not bypass_DXL:
-        if not DXL_controller.ping():
-            print("Palm actuator offline.")
-            error = error | (1 << 3)
+        trail = 0
+        check = False
+        print("Pinging Palm actuator...")
+        while not check:
+            if not DXL_controller.ping():
+                trail += 1
+                if trail > int(PING_TRAIL_COUNT / 2):
+                    # WARNING about bad communication
+                    print("WARNING: Palm actuator communication intermittent.")
+                if trail > PING_TRAIL_COUNT:
+                    # Tried PING_TRAIL_COUNT times and still no luck:
+                    print("ERROR: Palm actuator offline.")
+                    error = error | (1 << 3)
+                    break
+                else:
+                    # Retry in 0.5s
+                    print("Retry in 0.5 second.")
+                    time.sleep(0.5)
+            else:
+                # Ping succeed
+                check = True
 
     if error:
         print("One or more actuators offline. Exiting...")
@@ -397,9 +462,22 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
             print("%s homed." % f.name)
         else:
             print("%s homing abnormal!" % f.name)  # TODO: throw exception
+            usr = input("Continue? (Y/N)")
+            if usr == 'Y' or 'y':
+                pass
+            else:
+                return
 
     # print("home_offset recorded as: % 8.2f" % home_offset)
     # print("Current Position:%5.2f" % pos)
+
+    if not bypass_ext_enc:
+        ext_enc.connect()
+        time.sleep(0.5)
+        data = ext_enc.read_angle()
+        ext_enc.release()
+        for idx, f in enumerate(robot.fingerlist):
+            f.encoder_offset = data[idx]
 
     # Get end_pos
     usr = input("Auto set the end limit? (y/n)")
@@ -507,14 +585,14 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
     # Build list
     data = []
     for f in robot.fingerlist:
-        data.append([f.name, f.motor_id, f.homing_offset, f.travel])
+        data.append([f.name, f.motor_id, f.homing_offset, f.travel, f.encoder_offset])
     data.append([robot.palm.name, robot.palm.motor_id, robot.palm.home, robot.palm.travel])
 
     usr = input("Save Data? (y/n)")
     if usr == "y" or usr == "Y":
         # Write file
         filename = 'Settings/initials.txt'
-        filepath = os.path.join(str(Path(os.getcwd()).parent), filename)
+        filepath = os.path.join(str(Path(os.getcwd())), filename)
         initials = open(filepath, 'w')
         for i in data:
             initials.write(str(i)[1:-1])
@@ -522,8 +600,8 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
         initials.close()
         print("The following data has been written into initals.txt:")
         for f in robot.fingerlist:
-            print("%s Motor ID: %d, homing_offset: % 8.2f, travel: % 8.2f"
-                  % (f.name, f.motor_id, f.homing_offset, f.travel))
+            print("%s Motor ID: %d, homing_offset: % 8.2f, travel: % 8.2f, encoder_offset: % 8.2f"
+                  % (f.name, f.motor_id, f.homing_offset, f.travel, f.encoder_offset))
             motor_controller.pbm.save_config(f.motor_id)
         print("Config saved to BEAR.")
         print("Full hand calibration complete.")
@@ -533,14 +611,14 @@ def calibration_full(robot, motor_controller, DXL_controller, bypass_DXL=False):
 
 if __name__ == '__main__':
     Robot = DAnTE
-    BEAR_controller = MotorController(Robot.BEAR_baudrate, Robot.BEAR_port)
-    DXL_controller = DynamixelController(1, Robot.DXL_port)
+
     user = input("Is this a (F)ull hand calibration or a (S)ingle finger calibration?")
     if user == 'F' or user == 'f':
         print("Starting full hand calibration...")
-        calibration_full(Robot, BEAR_controller, DXL_controller)
+        calibration_full(Robot)
 
     elif user == 'S' or user == 's':
+        BEAR_controller = MotorController(Robot.BEAR_baudrate, Robot.BEAR_port)
         print("Starting single finger calibration...")
         user = input("Which finger to calibrate? [(T)HUMB, (I)NDEX, INDEX_(M)]\n")
         if user == 'T' or user == 't':
