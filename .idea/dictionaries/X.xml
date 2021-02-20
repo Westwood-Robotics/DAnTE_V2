@@ -2,6 +2,7 @@
   <dictionary name="X">
     <words>
       <w>fsolve</w>
+      <w>spidev</w>
     </words>
   </dictionary>
 </component>

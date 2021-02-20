@@ -11,11 +11,15 @@ import os
 from pathlib import Path
 from Play.motor_controller import MotorController
 from Play.dynamixel_controller import DynamixelController
-from Play.MPS import MPS_Encoder_Cluster
 from Settings.Robot import *
 import matplotlib.pyplot as plt
 import math
-import Forward_Kinematics.forward_kin as FK
+
+if EXTERNAL_ENC:
+    # Only import the following when EXTERNAL_ENC is True as wiringpi and spidev are required.
+    import Forward_Kinematics.forward_kin as FK
+    from Play.MPS import MPS_Encoder_Cluster
+
 import pdb
 
 
@@ -49,7 +53,7 @@ def read_initials():
 
 class RobotController(object):
 
-    def __init__(self, robot=None, bypass_DXL=False, bypass_ext_enc = False):
+    def __init__(self, robot=None, bypass_DXL=False, bypass_ext_enc=False):
         if robot is None:
             print("Robot set to DAnTE by default")
             robot = RobotDataStructure("DAnTE", "/dev/ttyUSB0", 8000000, "/dev/ttyUSB1", 2000000, PALM, [INDEX, INDEX_M, THUMB])
@@ -64,7 +68,11 @@ class RobotController(object):
         else:
             self.DC = DynamixelController(self.robot.palm.motor_id, self.robot.DXL_port, self.robot.DXL_baudrate)
 
-        # You can also bypass external encoders
+        if not EXTERNAL_ENC:
+            # Force to bypass external encoders when EXTERNAL_ENC=None
+            bypass_ext_enc = True
+
+        # When debug, you might want to bypass external encoders
         self.bypass_ext_enc = bypass_ext_enc
         if self.bypass_ext_enc:
             self.ext_enc = None

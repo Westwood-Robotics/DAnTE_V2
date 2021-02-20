@@ -13,9 +13,12 @@ from pathlib import Path
 from Play.motor_controller import MotorController
 from Play.dynamixel_controller import DynamixelController
 from Settings.Robot import *
-from Play.MPS import MPS_Encoder_Cluster
 from Settings.Constants_DAnTE import *
-from Play.MPS import MPS_Encoder
+
+if EXTERNAL_ENC:
+    # Only import the following when EXTERNAL_ENC is True as wiringpi and spidev are required.
+    from Play.MPS import MPS_Encoder_Cluster
+
 import pdb
 
 # -----------------------------
@@ -229,6 +232,10 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
         DXL_controller = None
     else:
         DXL_controller = DynamixelController(robot.palm.motor_id, robot.DXL_port, robot.DXL_baudrate)
+
+    if not EXTERNAL_ENC:
+        # Force to bypass external encoders when EXTERNAL_ENC=None
+        bypass_ext_enc = True
 
     # When debug, you might want to bypass external encoders
     if bypass_ext_enc:

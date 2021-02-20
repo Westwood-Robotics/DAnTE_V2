@@ -116,6 +116,9 @@ IDLE_D = 2
 # ------------------------------
 # EXTERNAL ENCODERS
 # ------------------------------
+# Existence of external encoders
+EXTERNAL_ENC = True  # Set to None if not using external encoders
+
 # We only have SPI bus 0 available to us on the Pi
 BUS = 0
 MAX_SPI_SPEED = 2000  # Hz
