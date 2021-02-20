@@ -1,6 +1,21 @@
 # DAnTE_V2
 Controller software for Westwood Robotics DAnTE V2
 
+## Hardware
+#### 1. DAnTE_V2
+
+The current version of DAnTE V2 has three fingers: (start from the fixed finger and count clockwise when looking at the palm from the top) THUMB, INDEX, INDEX_M. All fingers has 3 joints, 2 DoF and are under actuated, driven by one Koala BEAR V2 actuator by Westwood Robotics. The INDEX and INDEX_M fingers are mirrored to each other, and are mirrorly coupled and driven by a single Dynamixel servo motor by Robotis so that they can respectively rotate along their axis perpendicular to the palm. The BEARs communicate with controlling device via Westwood Robotics USB2BEAR dangle, and an ordinary RS232 device is needed for the Dynamixel. 
+
+Each finger has an external encoder (12bit Encoder-R12S10 by Westwood Robotics) at the base joint (MCP joint) of the finger. Absolute kinematics of a finger can be acquired when combine the external encoder reading and the BEAR position reading. The encoders use SPI protocal to communicate with controlling device.
+
+DAnTE_V2 takes 9~12V DC power supply. Lower voltage will cause hardware fault while higher voltage will cause hardware damage upon power up.
+
+#### 2. Controlling Device
+
+This current DAnTE firmware is only written in Python 3 thus a computer with Python 3 environment is required. 
+
+DAnTE is controlled by a Raspberry Pi 4 by default, but it can also be paired with other computers that has at least equivalent computing power. Keep in mind that an SPI interface is required to communicate with the external encoders, otherwise, please go to Settings/Constants_DAnTE.py and set "EXTERNAL_ENC" to "None".
+
 ## Dependencies
 
 #### 1. PyBEAR
@@ -29,10 +44,13 @@ sudo udevadm control --reload
 
 The SciPy package is required for kinematics. Install with pip before playing with DAnTE. 
 
-#### 5. WiringPi
+#### 5. WiringPi & spidev
 
-The WiringPi package is required for reading external encoders. 
-It should be WiringPi is PRE-INSTALLED with standard Raspbian systems. Otherwise, refer to http://wiringpi.com/download-and-install/
+The WiringPi and spidev packages are required for reading external encoders. 
+WiringPi should be PRE-INSTALLED with standard Raspbian systems. Otherwise, refer to http://wiringpi.com/download-and-install/
+spidev should also come with standard Raspbian system.
+
+If you are not controlling DAnTE from a Raspberry Pi(thus not using external encoders to get absolute exact joint angles of the fingers), please go to Settings/Constants_DAnTE.py and set "EXTERNAL_ENC" to "None". This will prevent importing the WiringPi & spidev, which otherwise will cause an error. 
 
 ## Work with DAnTE
 
