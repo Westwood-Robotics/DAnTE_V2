@@ -18,7 +18,7 @@ Script that holds macros for robot tuning.
 # ==================================================
 
 # ------------------------------
-# GRAB
+# GRAB Function
 # ------------------------------
 
 TIMEOUT_GRAB = 3
@@ -54,12 +54,20 @@ def approach_i_func(x):
 
 approach_command_max = 3
 
+default_approach_speed = 1
+default_approach_stiffness = 1
+default_detect_current = 0.42
+default_final_strength = 1
+default_max_iq = 1.5
+
 # ------------------------------
 # HOLD
 # ------------------------------
 delta_position = 0.15  # Move goal_position command inward by this amount at hold for firm contact
 grip_confirm = 1000  # Number of times a grip must be confirmed before triggering, this is a rough method to filter
 # out faulty grip confirmation
+
+default_hold_stiffness = 0.5
 
 # ------------------------------
 # GRIP

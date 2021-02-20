@@ -248,11 +248,20 @@ class RobotController(object):
             print("Run start_robot first.")
             return False
 
+        abnormal = [0, 0, 0, 0]
+        # [Fingers, Palm] abnormal code:
+        # 10000 External encoder offset discrepancy
+        # 01000 Failed to travel to home
+        # 00100 Failed to fully close
+        # 00010 Position out of range
+        # 00001 home_offset abnormal
+
         # 0. Check PALM first
         if not self.bypass_DXL:
             # Compare DXL homing_offset
             if self.DC.get_homing_offset() != 0:
                 print("Palm actuator needs calibration.\nCalibrate it first, or run with bypass_DXL option.")
+                abnormal[3] = 0b00001
                 return False
             else:
                 # Check if position in range, home ~ home+pi/2
@@ -261,6 +270,7 @@ class RobotController(object):
                     pass
                 else:
                     print("Palm actuator needs calibration.\nCalibrate it first, or run with bypass_DXL option.")
+                    abnormal[3] = 0b00010
                     return False
 
         # bypass_DXL or PALM checked
@@ -273,14 +283,6 @@ class RobotController(object):
             time.sleep(0.5)
 
         self.MC.init_driver_all()
-
-        abnormal = [0, 0, 0]
-        # Finger abnormal code:
-        # 10000 External encoder offset discrepancy
-        # 01000 Failed to travel to home
-        # 00100 Failed to fully close
-        # 00010 Position out of range
-        # 00001 home_offset abnormal
 
         # 1. Compare home_offset
         for i in range(3):

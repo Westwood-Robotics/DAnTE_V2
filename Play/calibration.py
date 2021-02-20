@@ -390,7 +390,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                         else:
                             detect_count[i] += 1
                     if err[i] != 128:
-                        print("%s error, code:" % robot.fingerlist[i].name, bin(err[i]))
+                        print("%s BEAR error, code:" % robot.fingerlist[i].name, bin(err[i]))
 
             except KeyboardInterrupt:
                 running = [0]
@@ -533,7 +533,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                         else:
                             detect_count[i] += 1
                     if err[i] != 128:
-                        print("%s error, code:" % robot.fingerlist[i].name, bin(err[i]))
+                        print("%s BEAR error, code:" % robot.fingerlist[i].name, bin(err[i]))
 
             except KeyboardInterrupt:
                 running = [0]
@@ -574,7 +574,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                         running[i] = False
                         motor_controller.torque_enable(robot.finger_ids[i], 0)
                     if err[i] != 128:
-                        print("%s error, code:" % robot.fingerlist[i].name, bin(err[i]))
+                        print("%s BEAR error, code:" % robot.fingerlist[i].name, bin(err[i]))
             except KeyboardInterrupt:
                 running = [0]
                 print("User interrupted.")
