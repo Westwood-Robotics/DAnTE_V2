@@ -10,7 +10,7 @@ __status__ = "Prototype"
 
 import time
 import os
-import numpy
+import math
 import spidev
 import wiringpi
 from Settings.MPS_CONTROL_TABLE import *
@@ -23,6 +23,10 @@ class MPS_Encoder(object):  # Handles a single encoder
 
     def __init__(self, name, chip_bus, cs, max_speed, mode, gpio=False):
         self.name = name
+        if self.name == "MA310" or "MA710":
+            self.precision = 12  # These are 12bit encoders
+        else:
+            self.precision = 12  # Default encoder precision
         self.chip_bus = chip_bus
         self.cs = cs  # Chip Select, set to 0 if connected to CE0 on Pi, or 1 if connected to CE1
         self.max_speed = max_speed
@@ -145,6 +149,11 @@ class MPS_Encoder_Cluster(object):  # Handles a cluster of encoders via utilizin
 
     def __init__(self, name, chip_bus, cs, max_speed, mode):
         self.name = name
+        if self.name == "MA310" or "MA710":
+            self.precision = 4096  # These are 12bit encoders
+        else:
+            self.precision = 4096  # Default encoder precision
+        self.conversion = 2*math.pi/self.precision  # Conversion rate from encoder reading to [0, 2*pi)
         self.chip_bus = chip_bus
         self.cs = cs  # Chip Select, a list of CS pins on GPIO
         self.max_speed = max_speed
@@ -171,7 +180,8 @@ class MPS_Encoder_Cluster(object):  # Handles a cluster of encoders via utilizin
             wiringpi.digitalWrite(val, 1)  # Set target ChipSelect GPIO as HIGH
             high_byte = data[0] << 8
             low_byte = data[1]
-            self.angles[idx] = (high_byte + low_byte) >> 4  # Get rid of last 4 bit whatever
+            self.angles[idx] = ((high_byte + low_byte) >> 4) * self.conversion
+            # Get rid of last 4 bit whatever and convert to rad
         return self.angles
 
     def release(self):
