@@ -149,7 +149,7 @@ IQ_MAX_INIT = 1.5
 TIMEOUT_INIT = 5
 
 # ------------------------------
-# GRAB
+# GRAB Function
 # ------------------------------
 MA_window = 15  # Window for simple moving average
 SMOOTHING = 0.07  # Smoothing factor for exponential moving average
@@ -160,12 +160,6 @@ SPRING_COMP_START = 0.7
 SPRING_COMP_BASE = 0.18
 SPRING_COMP_FACTOR = 0.06
 
-default_approach_speed = 1
-default_approach_stiffness = 1
-default_detect_current = 0.42
-default_final_strength = 1
-default_max_iq = 1.5
-
 approach_speed_min = 0.5
 
 # ------------------------------
@@ -173,7 +167,6 @@ approach_speed_min = 0.5
 # ------------------------------
 HOLD_P_FACTOR = 1.5
 HOLD_D_FACTOR = 1
-default_hold_stiffness = 0.5
 
 # ------------------------------
 # GRIP

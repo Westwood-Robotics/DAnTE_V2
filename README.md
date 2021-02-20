@@ -65,10 +65,19 @@ Perform calibration before your first run after open-box, and then after every r
 python3 -m Play.calibration
 ```
 
-Then follow instructions as prompt. You can select to calibrate the whole hand or just one single finger.
+Then follow instructions as prompt. You can select to calibrate just one single finger(not yet ready) or the whole hand.
 
-The calibration checks the integraty of the system and sets zero references for all actuators. Then it looks for the range of motion for all the fingers or the selected finger. Calibration results will be writen into ../Settings/initials.txt for initialization reference.
+The calibration checks the integrity of the system and sets zero references for all actuators. Then it looks for the range of motion for all the fingers or the selected finger. Calibration results will be writen into ../Settings/initials.txt for initialization reference.
 
+All actuators involved get pinged at first when calibration. If there is an communication problem, a 4-bit error code will be generated, with each bit representing a device:
+
+| bit  | Device |
+| ---- | -------|
+| 3  | PALM  |
+| 2  | THUMB  |
+| 1  | INDEX_M  |
+| 0  | INDEX  |
+ 
 ###### 0.2 Initialization
 
 Initialization is a function defined in the robot_controller module. Run initialization first after booting the system. Make sure system is started with start_robot() function.
@@ -84,6 +93,35 @@ rc = RobotController(robot=DAnTE)
 rc.start_robot()
 rc.initialization()
 ```
+
+All actuators get pinged with start_robot(), and the calibration file initials.txt gets checked. If there is any problem, a 5-bit error code will be generated, with each bit representing:
+
+| bit  | Device |
+| ---- | -------|
+| 3  | Calibration File  |
+| 3  | PALM  |
+| 2  | THUMB  |
+| 1  | INDEX_M  |
+| 0  | INDEX  |
+
+There is an abnormal code for initialization, should there be anything wrong. The abnormal code is a list of four(4) 5-bit code, with each code representing a device:
+
+| bit  | Device |
+| ---- | -------|
+| 3  | PALM  |
+| 2  | THUMB  |
+| 1  | INDEX_M  |
+| 0  | INDEX  |
+
+and each bit representing an error:
+
+| bit  | Error |
+| ---- | -------|
+| 4  | External encoder offset discrepancy |
+| 3  | Failed to travel to home |
+| 2  | Failed to fully close |
+| 1  | Position out of range |
+| 0  | home_offset abnormal |
 
 #### 1. Motions
 
@@ -126,10 +164,25 @@ This function controls the grab motion of DAnTE:
 
 ###### 1.2 Release
 
-Use release() function for releasing.
-**This function is currently under construction.**
+Use release(release_mode, \*hold_stiffness) function for releasing.
 
-#### 2. Tunning
+This function instructs DAnTE to release, with three different modes to be specified in release_mode:
+- change-to-(H)old = change to hold mode, with the hold_stiffness as specified or go with default (Settings/Macros_DAnTE)
+- (L)et-go = release just a little bit so that the object can escape
+- (F)ul-release = fingers reset
+
+###### 1.3 Error
+
+And error code will be generated if there is any thing wrong during these operations. The error code and their meanings are:
+
+| code | error |
+| ---- | -------|
+| 1  | Timeout  |
+| 2  | User interruption  |
+| 3  | Initialization  |
+| 9  | Invalid input  |
+
+#### 2. Tuning
 
 Tune DAnTE via Macros_DAnTE, rarely need to modify Contants_DAnTE.
 
