@@ -3,9 +3,8 @@ __author__ 		= "Min Sung Ahn"
 __email__ 		= "aminsung@gmail.com"
 __copyright__ 	= "Copyright 2019 RoMeLa"
 __date__ = "January 1, 1999"
-
-__version__ 	= "1.0.0"
-__status__ 		= "Prototype"
+__version__ = "0.1.0"
+__status__ = "Beta"
 
 """
 Script that holds macros for robot tuning.
