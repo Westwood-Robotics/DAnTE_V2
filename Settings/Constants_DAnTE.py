@@ -50,7 +50,7 @@ c = 27.1  # Coupling link length
 l_3 = 6  # Proximal link drive arm length
 l_4 = 6.5  # Distal link drive arm length
 
-alpha_0 = [3.3746, 0.2330, 3.3561]  # alpha value [INDEX, INDEX_M, THUMB] when fingers homed and parallel (theta = 90)
+alpha_0 = [3.3746, -0.2330, 3.3561]  # alpha value [INDEX, INDEX_M, THUMB] when fingers homed and parallel (theta = 90)
 
 # ==================================================
 # ==================================================
