@@ -1212,7 +1212,7 @@ class RobotController(object):
             finger.angles[1] = ext_reading[idx] - finger.encoder_offset + math.pi/3  # Get beta from external encoders
             # Get [gamma, delta] from present position
             finger.angles[2] = FK.solver(finger.name, self.robot.palm.angle, finger.angles[0], finger.angles[1])
-            pdb.set_trace()
+            print(finger.name + ": " + str(finger.angles))
 
 
 if __name__ == '__main__':
