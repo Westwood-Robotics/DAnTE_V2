@@ -1217,6 +1217,7 @@ class RobotController(object):
             # Get [gamma, delta] from present position
             finger.angles[2:4] = FK.solver(finger.name, self.robot.palm.angle, finger.angles[0], finger.angles[1])
             print(finger.angles)
+        print("Palm: " + str(self.robot.palm.angle))
 
 
 if __name__ == '__main__':
