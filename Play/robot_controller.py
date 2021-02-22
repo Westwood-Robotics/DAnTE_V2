@@ -1192,6 +1192,12 @@ class RobotController(object):
         time.sleep(0.5)
 
     def update_angles(self):
+        error = 0  # 1 for timeout, 2 for user interruption, 3 for initialization, 9 for Invalid input
+        # Check initialization
+        if not self.robot.initialized:
+            error = 3
+            print("Robot not initialized. Exit.")
+            return error
         # Update finger joint angles
         data = self.MC.get_present_position_all()
         present_pos = [i[0] for i in data]  # [Index, Index_M, THUMB]
@@ -1206,6 +1212,7 @@ class RobotController(object):
             finger.angles[1] = ext_reading[idx] - finger.encoder_offset + math.pi/3  # Get beta from external encoders
             # Get [gamma, delta] from present position
             finger.angles[2] = FK.solver(finger.name, self.robot.palm.angle, finger.angles[0], finger.angles[1])
+            pdb.set_trace()
 
 
 if __name__ == '__main__':
