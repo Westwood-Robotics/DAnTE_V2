@@ -13,7 +13,6 @@ from scipy.optimize import fsolve
 import math
 from Settings.Constants_DAnTE import *
 
-
 def solver(finger_name, palm_angle, alpha, beta):
     # Get theta from palm_angle
     if finger_name == 'INDEX':
@@ -44,7 +43,7 @@ def solver(finger_name, palm_angle, alpha, beta):
         # The function to pass to fsolve
         return M*math.cos(x) + N*math.sin(x) + K
     omega = fsolve(func_1, 3.14) - beta
-    gamma = omega - math.pi/3
+    gamma = float(omega - math.pi/3)
 
     # 2. Solve for the angle between middle phalanx and distal phalanx, delta
     phi = math.pi - gamma
@@ -57,7 +56,7 @@ def solver(finger_name, palm_angle, alpha, beta):
         # The function to pass to fsolve
         return P * math.cos(x-phi) + Q * math.cos(x) + S
     tau = fsolve(func_2, 1)
-    delta = tau - 55*math.pi/180
+    delta = float(tau - 55*math.pi/180)
 
     return [gamma, delta]
 
