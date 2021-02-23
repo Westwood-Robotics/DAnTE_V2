@@ -46,7 +46,7 @@ def solver(finger_name, palm_angle, alpha, beta):
     gamma = float(omega - math.pi/3)
 
     # 2. Solve for the angle between middle phalanx and distal phalanx, delta
-    phi = math.pi - gamma
+    phi = 13/18*math.pi - gamma
     P = 2*l_3*l_4
     Q = -2*L_2*l_4
     S = l_3*l_3 + L_2*L_2 + l_4*l_4 - c*c - 2*l_3*l_4*math.cos(phi)
