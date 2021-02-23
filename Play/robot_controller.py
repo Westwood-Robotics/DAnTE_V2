@@ -1208,15 +1208,19 @@ class RobotController(object):
         self.ext_enc.release()
         # Update all joint angles
         for idx, finger in enumerate(self.robot.fingerlist):
-            print(finger.name)
-            print("alpha_0: %f" % alpha_0[idx])
-            print("present_pos: %f" % present_pos[idx])
+
             finger.angles[0] = alpha_0[idx] - present_pos[idx]  # Get alpha from present position
-            print("alpha: %f" % finger.angles[0])
+
             finger.angles[1] = ext_reading[idx] - finger.encoder_offset + math.pi/3  # Get beta from external encoders
             # Get [gamma, delta] from present position
             finger.angles[2:4] = FK.solver(finger.name, self.robot.palm.angle, finger.angles[0], finger.angles[1])
-            print(finger.angles)
+
+            print(finger.name)
+            # print("alpha_0: %f" % alpha_0[idx])
+            # print("present_pos: %f" % present_pos[idx])
+            # print("alpha: %f" % finger.angles[0])
+            angles_in_deg = [i*180/math.pi for i in finger.angles]
+            print(angles_in_deg)
         print("Palm: " + str(self.robot.palm.angle))
 
 
