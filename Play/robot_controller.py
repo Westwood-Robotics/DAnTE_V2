@@ -1217,7 +1217,8 @@ class RobotController(object):
 
             print(finger.name)
             # print("alpha_0: %f" % alpha_0[idx])
-            print("present_pos: %f" % present_pos[idx]*180/math.pi)
+            bear_pos = present_pos[idx]*180/math.pi
+            print("present_pos: %f" % bear_pos)
             # print("alpha: %f" % finger.angles[0])
             angles_in_deg = [i*180/math.pi for i in finger.angles]
             print(angles_in_deg)
