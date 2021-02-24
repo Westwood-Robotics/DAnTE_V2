@@ -401,6 +401,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
     finger_homing_error = []
     for idx, f in enumerate(robot.fingerlist):
         present_pos = motor_controller.pbm.get_present_position(f.motor_id)[0]
+        pdb.set_trace()
         if abs(present_pos) > 0.05:
             # If the present position is away from zero for more than 0.05rad (~2.8deg)
             finger_homing_error.append([f, present_pos])
