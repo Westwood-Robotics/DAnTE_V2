@@ -383,7 +383,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                             print("%s HOME reached." % robot.fingerlist[i].name)
                             # home_i[i] = current[i]
                             # print("%s home_i acquired." % robot.fingerlist[i].name)
-                            # motor_controller.torque_enable(robot.finger_ids[i], 0)
+                            motor_controller.torque_enable(robot.finger_ids[i], 0)
                             # print("End current was %2.2f" % home_i[i])
                             # print("End velocity was %2.2f" % vels[i])
                             running[i] = False
