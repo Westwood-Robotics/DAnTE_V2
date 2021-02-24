@@ -94,7 +94,7 @@ IQID_P = 0.02
 IQID_I = 0.02
 IQID_D = 0
 
-POS_P = 3
+POS_P = 5
 POS_I = 0.005
 POS_D = 1.5
 
