@@ -1213,7 +1213,7 @@ class RobotController(object):
 
             finger.angles[1] = ext_reading[idx] - finger.encoder_offset + math.pi/3  # Get beta from external encoders
             # Get [gamma, delta] from present position
-            finger.angles[2:4] = FK.solver(finger.name, self.robot.palm.angle, finger.angles[0], finger.angles[1])
+            finger.angles[2:4] = FK.angles(finger, self.robot.palm.angle)
 
             print(finger.name)
             # print("alpha_0: %f" % alpha_0[idx])
@@ -1223,6 +1223,16 @@ class RobotController(object):
             angles_in_deg = [i*180/math.pi for i in finger.angles]
             print(angles_in_deg)
         print("Palm: " + str(self.robot.palm.angle))
+
+    def visualization(self):
+        error = 0  # 1 for timeout, 2 for user interruption, 3 for initialization, 9 for Invalid input
+        # Check initialization
+        if not self.robot.initialized:
+            error = 3
+            print("Robot not initialized. Exit.")
+            return error
+        FK.visual(self.robot)
+
 
 
 if __name__ == '__main__':

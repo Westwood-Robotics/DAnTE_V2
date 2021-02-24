@@ -9,6 +9,7 @@ while run:
     try:
         usr = input("Press any key and enter to continue...")
         rc.update_angles()
+        rc.visualization()
     except KeyboardInterrupt:
         print("User interrupted.")
         run = False
