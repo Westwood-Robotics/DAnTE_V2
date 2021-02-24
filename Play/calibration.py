@@ -620,7 +620,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                 motor_controller.pbm.save_config(i[0].motor_id)
             print("Config saved to BEAR.")
         else:
-            print("Abort saving to BEAR.")
+            print("Abort saving to BEAR. Please power cycle hardware before using.")
 
     usr = input("Save Data? (y/n)")
     if usr == "y" or usr == "Y":
