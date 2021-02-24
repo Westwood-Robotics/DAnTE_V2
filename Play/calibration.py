@@ -494,7 +494,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                     return
     # Update all finger.homing_offset
     for f in robot.fingerlist:
-        f.homing_offset = motor_controller.pbm.get_homing_offset(f.motor_id)[0]
+        f.homing_offset = motor_controller.pbm.get_homing_offset(f.motor_id)[0][0]
 
     if not bypass_ext_enc:
         ext_enc.connect()
