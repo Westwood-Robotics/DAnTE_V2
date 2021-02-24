@@ -400,7 +400,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
     # Check if HOMING_OFFSET need to be updated
     finger_homing_error = []
     for idx, f in enumerate(robot.fingerlist):
-        present_pos = motor_controller.pbm.get_present_position(f.motor_id)[0]
+        present_pos = motor_controller.pbm.get_present_position(f.motor_id)[0][0]
         pdb.set_trace()
         if abs(present_pos) > 0.05:
             # If the present position is away from zero for more than 0.05rad (~2.8deg)
