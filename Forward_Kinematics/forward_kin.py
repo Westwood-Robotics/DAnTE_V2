@@ -94,7 +94,7 @@ def finger_fk(finger, palm_angle):
         theta_1 = m.pi/6 + palm_angle - m.pi/2
     elif finger.name == 'INDEX_M':
         theta_0 = -m.pi*5/6
-        theta_1 = m.pi*1/3 - m.pi/2 + palm_angle
+        theta_1 = -m.pi/6 + m.pi/2 - palm_angle
     else:
         theta_0 = m.pi/2
         theta_1 = 0

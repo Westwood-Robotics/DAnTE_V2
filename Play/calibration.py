@@ -614,7 +614,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
     if finger_homing_error:
         print("The following fingers' homing_offset has been updated:")
         print([i[0].name for i in finger_homing_error])
-        usr = input("It is recommended to save changed settings. Continue? Y/N")
+        usr = input("It is recommended to save changed settings. Continue? (y/n)")
         if usr == 'Y' or 'y':
             for i in finger_homing_error:
                 motor_controller.pbm.save_config(i[0].motor_id)

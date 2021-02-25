@@ -281,6 +281,7 @@ class RobotController(object):
             self.DC.torque_enable(1)
             self.DC.set_goal_position(self.robot.palm.home)
             time.sleep(0.5)
+        self.robot.palm.angle = 0
 
         self.MC.init_driver_all()
 
