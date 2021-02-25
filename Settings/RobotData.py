@@ -8,6 +8,7 @@ __status__ = "Beta"
 
 from Settings.Constants_DAnTE import *
 import math
+import numpy as np
 
 
 class FingerDataStructure(object):
@@ -24,6 +25,7 @@ class FingerDataStructure(object):
         self.encoder = encoder  # Encoder pin# on Pi
         self.encoder_offset = -1  # Offset value for the encoder when finger is fully open
         self.angles = [0, 0, 0, 0]  # Phalanx angles, [alpha, beta, gamma, delta]
+        self.joint_locations = np.zeros([4, 3])  # 3D joint_locations = [MCP; PIP; DIP; Tip]
 
 
 class PalmDataStructure(object):

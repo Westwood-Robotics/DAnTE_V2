@@ -85,9 +85,6 @@ def T(theta, alpha, a, d):
 
 # Finger Forward Kinematics, return joint locations
 def finger_fk(finger, palm_angle):
-    # Pass finger.angles into joint_angles
-    # finger.angles: Phalanx angles, [alpha, beta, gamma, delta]
-
     # Get theta_0 and theta_1 from palm_angle
     if finger.name == 'INDEX':
         theta_0 = -m.pi/6
@@ -132,10 +129,9 @@ def visual(robot=DAnTE):
     ax.plot3D([0, 0], [0, 10], [0, 0], 'green')  # Plot y axis
     ax.plot3D([0, 0], [0, 0], [0, 10], 'blue')  # Plot z axis
 
-    palm_angle = robot.palm.angle
-    loc_INDEX = np.transpose(finger_fk(robot.fingerlist[0], palm_angle))
-    loc_INDEX_M = np.transpose(finger_fk(robot.fingerlist[1], palm_angle))
-    loc_THUMB = np.transpose(finger_fk(robot.fingerlist[2], palm_angle))
+    loc_INDEX = np.transpose(robot.fingerlist[0].joint_locations)
+    loc_INDEX_M = np.transpose(robot.fingerlist[1].joint_locations)
+    loc_THUMB = np.transpose(robot.fingerlist[2].joint_locations)
 
     ax.plot3D(loc_INDEX[0, :], loc_INDEX[1, :], loc_INDEX[2, :], 'black')  # Plot INDEX
     ax.plot3D(loc_INDEX_M[0, :], loc_INDEX_M[1, :], loc_INDEX_M[2, :], 'black')  # Plot INDEX_M

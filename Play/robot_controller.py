@@ -1225,6 +1225,22 @@ class RobotController(object):
             print(angles_in_deg)
         print("Palm: " + str(self.robot.palm.angle))
 
+    def forward_kinematics(self, *finger):
+        # Specify the finger to be calculated, otherwise all fingers will be calculated
+        error = 0  # 1 for timeout, 2 for user interruption, 3 for initialization, 9 for Invalid input
+        # Check initialization
+        if not self.robot.initialized:
+            error = 3
+            print("Robot not initialized. Exit.")
+            return error
+        palm_angle = self.robot.palm.angle
+        if len(finger) == 0:
+            # update all finger kinematics
+            for f in self.robot.fingerlist:
+                FK.finger_fk(f, palm_angle)
+        else:
+            FK.finger_fk(finger, palm_angle)
+
     def visualization(self):
         error = 0  # 1 for timeout, 2 for user interruption, 3 for initialization, 9 for Invalid input
         # Check initialization
