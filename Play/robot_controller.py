@@ -8,6 +8,7 @@ __status__ = "Beta"
 
 import time
 import os
+import sys
 from pathlib import Path
 from Play.motor_controller import MotorController
 from Play.dynamixel_controller import DynamixelController
@@ -191,13 +192,14 @@ class RobotController(object):
 
         if error:
             print("Failed to start robot.")
+            sys.exit()
         else:
             # Set Current, Velocity and Position PID as well as safe iq_max and velocity_max, and clear Direct Force PID.
             self.MC.init_driver_all()
             self.robot.booted = True
             print("Welcome aboard, Captain.")
 
-        return error
+        # return error
 
     def get_robot_enable(self):
         """
