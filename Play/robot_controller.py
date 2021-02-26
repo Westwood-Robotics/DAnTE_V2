@@ -193,6 +193,7 @@ class RobotController(object):
         if error:
             print("Failed to start robot.")
             sys.exit()
+
         else:
             # Set Current, Velocity and Position PID as well as safe iq_max and velocity_max, and clear Direct Force PID.
             self.MC.init_driver_all()
