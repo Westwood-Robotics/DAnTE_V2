@@ -121,20 +121,20 @@ class RobotController(object):
             while not check:
                 if not bool(self.MC.pbm.ping(f.motor_id)):
                     trail += 1
-                    if trail == int(PING_TRAIL_COUNT / 2):
-                        # WARNING about bad communication
-                        print("WARNING: %s BEAR communication intermittent." % f.name)
-                    elif trail > PING_TRAIL_COUNT:
+                    if trail > PING_TRAIL_COUNT:
                         # Tried PING_TRAIL_COUNT times and still no luck:
                         print("ERROR: %s offline." % f.name)
                         error = error | (1 << idx)
                         break
                     # Retry in 0.5s
-                    print("Retry in 0.5 second.")
+                    # print("Retry in 0.5 second.")
                     time.sleep(0.5)
                 else:
                     # Ping succeed
                     check = True
+                    if trail > int(PING_TRAIL_COUNT / 2):
+                        # WARNING about bad communication
+                        print("WARNING: %s BEAR communication intermittent." % f.name)
         # DXL:
         if not self.bypass_DXL:
             trail = 0
@@ -143,20 +143,20 @@ class RobotController(object):
             while not check:
                 if not self.DC.ping():
                     trail += 1
-                    if trail == int(PING_TRAIL_COUNT / 2):
-                        # WARNING about bad communication
-                        print("WARNING: Palm actuator communication intermittent.")
-                    elif trail > PING_TRAIL_COUNT:
+                    if trail > PING_TRAIL_COUNT:
                         # Tried PING_TRAIL_COUNT times and still no luck:
                         print("ERROR: Palm actuator offline.")
                         error = error | (1 << 3)
                         break
                     # Retry in 0.5s
-                    print("Retry in 0.5 second.")
+                    # print("Retry in 0.5 second.")
                     time.sleep(0.5)
                 else:
                     # Ping succeed
                     check = True
+                    if trail > int(PING_TRAIL_COUNT / 2):
+                        # WARNING about bad communication
+                        print("WARNING: Palm actuator communication intermittent.")
 
         # Read initials, fact check and populate robot object
         init_data = read_initials()  # init_data = [['FINGER', motor_id, homing_offset, travel, encoder_offset]...]
