@@ -121,7 +121,7 @@ class RobotController(object):
             while not check:
                 if not bool(self.MC.pbm.ping(f.motor_id)):
                     trail += 1
-                    if int(PING_TRAIL_COUNT / 2) < trail < PING_TRAIL_COUNT:
+                    if trail == int(PING_TRAIL_COUNT / 2):
                         # WARNING about bad communication
                         print("WARNING: %s BEAR communication intermittent." % f.name)
                     elif trail > PING_TRAIL_COUNT:
@@ -129,10 +129,9 @@ class RobotController(object):
                         print("ERROR: %s offline." % f.name)
                         error = error | (1 << idx)
                         break
-                    else:
-                        # Retry in 0.5s
-                        print("Retry in 0.5 second.")
-                        time.sleep(0.5)
+                    # Retry in 0.5s
+                    print("Retry in 0.5 second.")
+                    time.sleep(0.5)
                 else:
                     # Ping succeed
                     check = True
@@ -144,7 +143,7 @@ class RobotController(object):
             while not check:
                 if not self.DC.ping():
                     trail += 1
-                    if int(PING_TRAIL_COUNT / 2) < trail < PING_TRAIL_COUNT:
+                    if trail == int(PING_TRAIL_COUNT / 2):
                         # WARNING about bad communication
                         print("WARNING: Palm actuator communication intermittent.")
                     elif trail > PING_TRAIL_COUNT:
@@ -152,10 +151,9 @@ class RobotController(object):
                         print("ERROR: Palm actuator offline.")
                         error = error | (1 << 3)
                         break
-                    else:
-                        # Retry in 0.5s
-                        print("Retry in 0.5 second.")
-                        time.sleep(0.5)
+                    # Retry in 0.5s
+                    print("Retry in 0.5 second.")
+                    time.sleep(0.5)
                 else:
                     # Ping succeed
                     check = True
