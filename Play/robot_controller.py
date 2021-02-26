@@ -121,7 +121,7 @@ class RobotController(object):
             while not check:
                 if not bool(self.MC.pbm.ping(f.motor_id)):
                     trail += 1
-                    if trail > int(PING_TRAIL_COUNT / 2):
+                    if int(PING_TRAIL_COUNT / 2) < trail < PING_TRAIL_COUNT:
                         # WARNING about bad communication
                         print("WARNING: %s BEAR communication intermittent." % f.name)
                     elif trail > PING_TRAIL_COUNT:
@@ -144,10 +144,10 @@ class RobotController(object):
             while not check:
                 if not self.DC.ping():
                     trail += 1
-                    if trail > int(PING_TRAIL_COUNT / 2):
+                    if int(PING_TRAIL_COUNT / 2) < trail < PING_TRAIL_COUNT:
                         # WARNING about bad communication
                         print("WARNING: Palm actuator communication intermittent.")
-                    if trail > PING_TRAIL_COUNT:
+                    elif trail > PING_TRAIL_COUNT:
                         # Tried PING_TRAIL_COUNT times and still no luck:
                         print("ERROR: Palm actuator offline.")
                         error = error | (1 << 3)
