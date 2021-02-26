@@ -1213,7 +1213,7 @@ class RobotController(object):
 
             finger.angles[0] = alpha_0[idx] + present_pos[idx]  # Get alpha from present position
 
-            finger.angles[1] = ext_reading[idx] - finger.encoder_offset + math.pi/3  # Get beta from external encoders
+            finger.angles[1] = ext_reading[idx] - finger.encoder_offset + math.pi/6  # Get beta from external encoders
             # Get [gamma, delta] from present position
             finger.angles[2:4] = FK.angles(finger, self.robot.palm.angle)
 
