@@ -148,7 +148,7 @@ class MPS_Encoder(object):  # Handles a single encoder
     def set_rotation_direction(self, val):
         # Set the rotation direction of the sensor
         if val == 1:
-            setting = 0b11111111
+            setting = 0b10000000
             print('Setting Rotation Direction to CCW...')
         elif val == 0:
             setting = 0
