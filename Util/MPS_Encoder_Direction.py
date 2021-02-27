@@ -13,6 +13,7 @@ from Settings.Constants_DAnTE import *
 from Settings.Robot import *
 
 ext_enc = MPS_Encoder("MA310", BUS, INDEX_M.encoder, MAX_SPI_SPEED, SPI_MODE)
-
+ext_enc.connect()
 re = ext_enc.set_rotation_direction(1)
+ext_enc.release()
 print(re)
