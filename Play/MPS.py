@@ -56,9 +56,11 @@ class MPS_Encoder(object):  # Handles a single encoder
 
     def get_angle(self):
         # Read angle from device
-        wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         data = spi.readbytes(2)
-        wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         high_byte = data[0] << 8
         low_byte = data[1]
         angle = ((high_byte + low_byte) >> 4) * self.conversion  # Get rid of last 4 bit whatever and convert to rad
@@ -67,10 +69,12 @@ class MPS_Encoder(object):  # Handles a single encoder
     def get_BCT(self):
         # Read the BCT register value
         send = 0b01000010
-        wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         spi.writebytes([send, 0])
         data = spi.readbytes(2)
-        wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         BTC = data[0]
         return BTC
 
@@ -78,11 +82,13 @@ class MPS_Encoder(object):  # Handles a single encoder
         # Write the BCT register value
         # BTC value
         send = 0b10000010
-        wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         spi.writebytes([send, BTC])
         time.sleep(0.02)
         data = spi.readbytes(2)
-        wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         high_byte = data[0]
         if high_byte == BTC:
             return True
@@ -98,18 +104,26 @@ class MPS_Encoder(object):  # Handles a single encoder
 
     def read_reg(self, reg_name):
         # Read from a register
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         packet = INSTRUCTION.read + REG_DIC[reg_name]
         spi.writebytes([packet, 0])
         data = spi.readbytes(2)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         reg_val = data[0]
         return reg_val
 
     def write_reg(self, reg_name, reg_val):
         # Write to a register
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         packet = INSTRUCTION.write + REG_DIC[reg_name]
         spi.writebytes([packet, reg_val])
         time.sleep(0.02)
         data = spi.readbytes(2)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         return_val = data[0]
         if return_val == reg_val:
             return True
