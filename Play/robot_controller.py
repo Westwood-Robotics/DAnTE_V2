@@ -412,7 +412,7 @@ class RobotController(object):
         if not self.bypass_ext_enc:
             self.ext_enc.connect()
             time.sleep(0.2)
-            ext_reading = self.ext_enc.read_angle()
+            ext_reading = self.ext_enc.get_angle()
             self.ext_enc.release()
             for idx, finger in enumerate(self.robot.fingerlist):
                 if 0.18 < abs(ext_reading[idx] - finger.encoder_offset) < 6.1:
@@ -1206,7 +1206,7 @@ class RobotController(object):
         # Get ext_enc reading:
         self.ext_enc.connect()
         time.sleep(0.2)
-        ext_reading = self.ext_enc.read_angle()
+        ext_reading = self.ext_enc.get_angle()
         self.ext_enc.release()
         # Update all joint angles
         for idx, finger in enumerate(self.robot.fingerlist):
