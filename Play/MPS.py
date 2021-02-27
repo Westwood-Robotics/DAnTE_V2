@@ -104,23 +104,33 @@ class MPS_Encoder(object):  # Handles a single encoder
 
     def read_reg(self, reg_name):
         # Read from a register
+        packet = INSTRUCTION.read + REG_DIC[reg_name]
         if self.gpio:
             wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
-        packet = INSTRUCTION.read + REG_DIC[reg_name]
         spi.writebytes([packet, 0])
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
+        time.sleep(0.00075)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         data = spi.readbytes(2)
         if self.gpio:
             wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         reg_val = data[0]
+        time.sleep(0.00075)
         return reg_val
 
     def write_reg(self, reg_name, reg_val):
         # Write to a register
+        packet = INSTRUCTION.write + REG_DIC[reg_name]
         if self.gpio:
             wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
-        packet = INSTRUCTION.write + REG_DIC[reg_name]
         spi.writebytes([packet, reg_val])
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         time.sleep(0.02)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         data = spi.readbytes(2)
         if self.gpio:
             wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
