@@ -12,7 +12,7 @@ from Play.MPS import MPS_Encoder
 from Settings.Constants_DAnTE import *
 from Settings.Robot import *
 
-ext_enc = MPS_Encoder("MA310", BUS, INDEX_M.encoders, MAX_SPI_SPEED, SPI_MODE)
+ext_enc = MPS_Encoder("MA310", BUS, INDEX_M.encoder, MAX_SPI_SPEED, SPI_MODE)
 
 re = ext_enc.set_rotation_direction(1)
 print(re)
