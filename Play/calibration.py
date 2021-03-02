@@ -499,7 +499,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
     if not bypass_ext_enc:
         ext_enc.connect()
         time.sleep(0.5)
-        data = ext_enc.read_angle()
+        data = ext_enc.get_angle()
         ext_enc.release()
         for idx, f in enumerate(robot.fingerlist):
             f.encoder_offset = data[idx]

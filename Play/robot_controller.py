@@ -8,6 +8,7 @@ __status__ = "Beta"
 
 import time
 import os
+import sys
 from pathlib import Path
 from Play.motor_controller import MotorController
 from Play.dynamixel_controller import DynamixelController
@@ -120,21 +121,20 @@ class RobotController(object):
             while not check:
                 if not bool(self.MC.pbm.ping(f.motor_id)):
                     trail += 1
-                    if trail > int(PING_TRAIL_COUNT / 2):
-                        # WARNING about bad communication
-                        print("WARNING: %s BEAR communication intermittent." % f.name)
-                    elif trail > PING_TRAIL_COUNT:
+                    if trail > PING_TRAIL_COUNT:
                         # Tried PING_TRAIL_COUNT times and still no luck:
                         print("ERROR: %s offline." % f.name)
                         error = error | (1 << idx)
                         break
-                    else:
-                        # Retry in 0.5s
-                        print("Retry in 0.5 second.")
-                        time.sleep(0.5)
+                    # Retry in 0.5s
+                    # print("Retry in 0.5 second.")
+                    time.sleep(0.5)
                 else:
                     # Ping succeed
                     check = True
+                    if trail > int(PING_TRAIL_COUNT / 2):
+                        # WARNING about bad communication
+                        print("WARNING: %s BEAR communication intermittent." % f.name)
         # DXL:
         if not self.bypass_DXL:
             trail = 0
@@ -143,21 +143,20 @@ class RobotController(object):
             while not check:
                 if not self.DC.ping():
                     trail += 1
-                    if trail > int(PING_TRAIL_COUNT / 2):
-                        # WARNING about bad communication
-                        print("WARNING: Palm actuator communication intermittent.")
                     if trail > PING_TRAIL_COUNT:
                         # Tried PING_TRAIL_COUNT times and still no luck:
                         print("ERROR: Palm actuator offline.")
                         error = error | (1 << 3)
                         break
-                    else:
-                        # Retry in 0.5s
-                        print("Retry in 0.5 second.")
-                        time.sleep(0.5)
+                    # Retry in 0.5s
+                    # print("Retry in 0.5 second.")
+                    time.sleep(0.5)
                 else:
                     # Ping succeed
                     check = True
+                    if trail > int(PING_TRAIL_COUNT / 2):
+                        # WARNING about bad communication
+                        print("WARNING: Palm actuator communication intermittent.")
 
         # Read initials, fact check and populate robot object
         init_data = read_initials()  # init_data = [['FINGER', motor_id, homing_offset, travel, encoder_offset]...]
@@ -191,13 +190,15 @@ class RobotController(object):
 
         if error:
             print("Failed to start robot.")
+            sys.exit()
+
         else:
             # Set Current, Velocity and Position PID as well as safe iq_max and velocity_max, and clear Direct Force PID.
             self.MC.init_driver_all()
             self.robot.booted = True
             print("Welcome aboard, Captain.")
 
-        return error
+        # return error
 
     def get_robot_enable(self):
         """
@@ -411,7 +412,7 @@ class RobotController(object):
         if not self.bypass_ext_enc:
             self.ext_enc.connect()
             time.sleep(0.2)
-            ext_reading = self.ext_enc.read_angle()
+            ext_reading = self.ext_enc.get_angle()
             self.ext_enc.release()
             for idx, finger in enumerate(self.robot.fingerlist):
                 if 0.18 < abs(ext_reading[idx] - finger.encoder_offset) < 6.1:
@@ -1205,14 +1206,14 @@ class RobotController(object):
         # Get ext_enc reading:
         self.ext_enc.connect()
         time.sleep(0.2)
-        ext_reading = self.ext_enc.read_angle()
+        ext_reading = self.ext_enc.get_angle()
         self.ext_enc.release()
         # Update all joint angles
         for idx, finger in enumerate(self.robot.fingerlist):
 
             finger.angles[0] = alpha_0[idx] + present_pos[idx]  # Get alpha from present position
 
-            finger.angles[1] = ext_reading[idx] - finger.encoder_offset + math.pi/3  # Get beta from external encoders
+            finger.angles[1] = ext_reading[idx] - finger.encoder_offset + math.pi/6  # Get beta from external encoders
             # Get [gamma, delta] from present position
             finger.angles[2:4] = FK.angles(finger, self.robot.palm.angle)
 
