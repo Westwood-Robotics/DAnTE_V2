@@ -139,11 +139,12 @@ class DynamixelController(object):
     def set_homing_offset(self, homing_offset):
         # Write homing offset, value in radian, -pi/2 ~ pi/2
         # Only worked in joint mode/basic position mode
-        if abs(homing_offset) > math.pi/2:
+        if abs(homing_offset) > math.pi / 2:
             print("Input out of range.")
             return False
-        homing_offset = int(homing_offset/POSITION_UNIT)
-        comm_result, error = self.packet_handler.write4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_HOMING_OFFSET, homing_offset)
+        homing_offset = int(homing_offset / POSITION_UNIT)
+        comm_result, error = self.packet_handler.write4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_HOMING_OFFSET,
+                                                                homing_offset)
         if comm_result != COMM_SUCCESS:
             print("%s" % self.packet_handler.getTxRxResult(comm_result))
             return False
@@ -155,7 +156,8 @@ class DynamixelController(object):
 
     def get_homing_offset(self):
         # Read present position, value in radian
-        homing_offset, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_HOMING_OFFSET)
+        homing_offset, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                              ADDR_X_HOMING_OFFSET)
         if comm_result != COMM_SUCCESS:
             print("%s" % self.packet_handler.getTxRxResult(comm_result))
             return False
@@ -166,12 +168,13 @@ class DynamixelController(object):
             if homing_offset > 1024:
                 # Negative homing offset
                 homing_offset = homing_offset - 4294967296
-            homing_offset = homing_offset*POSITION_UNIT
+            homing_offset = homing_offset * POSITION_UNIT
             return homing_offset
 
     def torque_enable(self, val):
         # Enable/dis-enable Dynamixel Torque
-        comm_result, error = self.packet_handler.write1ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_TORQUE_ENABLE, val)
+        comm_result, error = self.packet_handler.write1ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_TORQUE_ENABLE,
+                                                                val)
         if comm_result != COMM_SUCCESS:
             print("%s" % self.packet_handler.getTxRxResult(comm_result))
             return False
@@ -183,7 +186,8 @@ class DynamixelController(object):
 
     def get_enable(self):
         # Get torque enable status of Dynamixel
-        val, comm_result, error = self.packet_handler.read1ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_TORQUE_ENABLE)
+        val, comm_result, error = self.packet_handler.read1ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                    ADDR_X_TORQUE_ENABLE)
         if comm_result != COMM_SUCCESS:
             print("%s" % self.packet_handler.getTxRxResult(comm_result))
             return False
@@ -195,8 +199,9 @@ class DynamixelController(object):
 
     def set_goal_position(self, goal_position):
         # Write goal position, value in radian
-        goal_position = int(goal_position/POSITION_UNIT)
-        comm_result, error = self.packet_handler.write4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_GOAL_POSITION, goal_position)
+        goal_position = int(goal_position / POSITION_UNIT)
+        comm_result, error = self.packet_handler.write4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_GOAL_POSITION,
+                                                                goal_position)
         if comm_result != COMM_SUCCESS:
             print("%s" % self.packet_handler.getTxRxResult(comm_result))
             return False
@@ -208,7 +213,8 @@ class DynamixelController(object):
 
     def get_goal_position(self):
         # Read present position, result in radian
-        goal_position, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_GOAL_POSITION)
+        goal_position, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                              ADDR_X_GOAL_POSITION)
         if comm_result != COMM_SUCCESS:
             print("%s" % self.packet_handler.getTxRxResult(comm_result))
             return False
@@ -216,12 +222,13 @@ class DynamixelController(object):
             print("%s" % self.packet_handler.getRxPacketError(error))
             return False
         else:
-            goal_position = goal_position*POSITION_UNIT
+            goal_position = goal_position * POSITION_UNIT
             return goal_position
 
     def get_present_position(self):
         # Read present position, result in radian
-        present_position, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_PRESENT_POSITION)
+        present_position, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                                 ADDR_X_PRESENT_POSITION)
         if comm_result != COMM_SUCCESS:
             print("%s" % self.packet_handler.getTxRxResult(comm_result))
             return False
@@ -229,12 +236,13 @@ class DynamixelController(object):
             print("%s" % self.packet_handler.getRxPacketError(error))
             return False
         else:
-            present_position = present_position*POSITION_UNIT
+            present_position = present_position * POSITION_UNIT
             return present_position
 
-    def get_present_velocity(self):
-        # Read present position, result in radian
-        present_velocity, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_PRESENT_VELOCITY)
+    def set_goal_velocity(self, goal_velocity):
+        goal_velocity = int(goal_velocity / VELOCITY_UNIT)
+        comm_result, error = self.packet_handler.write4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_GOAL_VELOCITY,
+                                                                goal_velocity)
         if comm_result != COMM_SUCCESS:
             print("%s" % self.packet_handler.getTxRxResult(comm_result))
             return False
@@ -242,7 +250,32 @@ class DynamixelController(object):
             print("%s" % self.packet_handler.getRxPacketError(error))
             return False
         else:
-            present_velocity = present_velocity*VELOCITY_UNIT
+            return True
+
+    def get_goal_velocity(self):
+        goal_velocity, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                              ADDR_X_GOAL_VELOCITY)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            goal_velocity = goal_velocity * VELOCITY_UNIT
+            return goal_velocity
+
+    def get_present_velocity(self):
+        present_velocity, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                                 ADDR_X_PRESENT_VELOCITY)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            present_velocity = present_velocity * VELOCITY_UNIT
             return present_velocity
 
     def set_profile_acceleration(self, val):
@@ -253,7 +286,8 @@ class DynamixelController(object):
 
         :return:
         """
-        comm_result, error = self.packet_handler.write4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_PROFILE_ACCELERATION,
+        comm_result, error = self.packet_handler.write4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                ADDR_X_PROFILE_ACCELERATION,
                                                                 val)
         if comm_result != COMM_SUCCESS:
             print("%s" % self.packet_handler.getTxRxResult(comm_result))
@@ -284,6 +318,227 @@ class DynamixelController(object):
         else:
             return True
 
+    def set_p_gain_velocity(self, val):
+        # Set P gain for velocity loop
+        if val > 16383 or val < 0:
+            print("Input out of range.")
+            return False
+        comm_result, error = self.packet_handler.write2ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_P_GAIN_VELOCITY,
+                                                                val)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return True
 
+    def get_p_gain_velocity(self):
+        # Read P gain for velocity loop
+        val, comm_result, error = self.packet_handler.read2ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                    ADDR_X_P_GAIN_VELOCITY)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return val
 
+    def set_i_gain_velocity(self, val):
+        # Set I gain for velocity loop
+        if val > 16383 or val < 0:
+            print("Input out of range.")
+            return False
+        comm_result, error = self.packet_handler.write2ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_I_GAIN_VELOCITY,
+                                                                val)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return True
 
+    def get_i_gain_velocity(self):
+        # Read P gain for velocity loop
+        val, comm_result, error = self.packet_handler.read2ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                    ADDR_X_I_GAIN_VELOCITY)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return val
+
+    def set_p_gain_position(self, val):
+        # Set P gain for velocity loop
+        if val > 16383 or val < 0:
+            print("Input out of range.")
+            return False
+        comm_result, error = self.packet_handler.write2ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_P_GAIN_POSITION,
+                                                                val)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return True
+
+    def get_p_gain_position(self):
+        # Read P gain for velocity loop
+        val, comm_result, error = self.packet_handler.read2ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                    ADDR_X_P_GAIN_POSITION)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return val
+
+    def set_i_gain_position(self, val):
+        # Set I gain for velocity loop
+        if val > 16383 or val < 0:
+            print("Input out of range.")
+            return False
+        comm_result, error = self.packet_handler.write2ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_I_GAIN_POSITION,
+                                                                val)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return True
+
+    def get_i_gain_position(self):
+        # Read P gain for velocity loop
+        val, comm_result, error = self.packet_handler.read2ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                    ADDR_X_I_GAIN_POSITION)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return val
+
+    def set_d_gain_position(self, val):
+        # Set I gain for velocity loop
+        if val > 16383 or val < 0:
+            print("Input out of range.")
+            return False
+        comm_result, error = self.packet_handler.write2ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_D_GAIN_POSITION,
+                                                                val)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return True
+
+    def get_d_gain_position(self):
+        # Read P gain for velocity loop
+        val, comm_result, error = self.packet_handler.read2ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                    ADDR_X_D_GAIN_POSITION)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return val
+
+    def set_velocity_limit(self, velocity_limit):
+        velocity_limit = int(velocity_limit / VELOCITY_UNIT)
+        comm_result, error = self.packet_handler.write4ByteTxRx(self.port_handler, self.DXL_ID, ADDR_X_VELOCITY_LIMIT,
+                                                                velocity_limit)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return True
+
+    def get_velocity_limit(self):
+        velocity_limit, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                               ADDR_X_VELOCITY_LIMIT)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            velocity_limit = velocity_limit * VELOCITY_UNIT
+            return velocity_limit
+
+    def set_position_limit_max(self, position_limit_max):
+        position_limit_max = int(position_limit_max / POSITION_UNIT)
+        comm_result, error = self.packet_handler.write4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                ADDR_X_POSITION_LIMIT_MAX,
+                                                                position_limit_max)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return True
+
+    def get_position_limit_max(self):
+        position_limit_max, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                                   ADDR_X_POSITION_LIMIT_MAX)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            position_limit_max = position_limit_max * POSITION_UNIT
+            return position_limit_max
+
+    def set_position_limit_min(self, position_limit_min):
+        position_limit_min = int(position_limit_min / POSITION_UNIT)
+        comm_result, error = self.packet_handler.write4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                ADDR_X_POSITION_LIMIT_MIN,
+                                                                position_limit_min)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            return True
+
+    def get_position_limit_min(self):
+        position_limit_min, comm_result, error = self.packet_handler.read4ByteTxRx(self.port_handler, self.DXL_ID,
+                                                                                   ADDR_X_POSITION_LIMIT_MIN)
+        if comm_result != COMM_SUCCESS:
+            print("%s" % self.packet_handler.getTxRxResult(comm_result))
+            return False
+        elif error != 0:
+            print("%s" % self.packet_handler.getRxPacketError(error))
+            return False
+        else:
+            position_limit_min = position_limit_min * POSITION_UNIT
+            return position_limit_min
