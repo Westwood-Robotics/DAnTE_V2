@@ -381,11 +381,11 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                     if abs(vels[i]) < VEL_CAL_DETECT and abs(current[i]) > IQ_CAL_DETECT:
                         if detect_count[i] > 5:
                             print("%s HOME reached." % robot.fingerlist[i].name)
-                            home_i[i] = current[i]
-                            print("%s home_i acquired." % robot.fingerlist[i].name)
+                            # home_i[i] = current[i]
+                            # print("%s home_i acquired." % robot.fingerlist[i].name)
                             motor_controller.torque_enable(robot.finger_ids[i], 0)
-                            print("End current was %2.2f" % home_i[i])
-                            print("End velocity was %2.2f" % vels[i])
+                            # print("End current was %2.2f" % home_i[i])
+                            # print("End velocity was %2.2f" % vels[i])
                             running[i] = False
                         else:
                             detect_count[i] += 1
@@ -397,84 +397,109 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                 motor_controller.torque_enable_all(0)
                 print("User interrupted.")
 
-    # Clear HOMING_OFFSET
-    for f in robot.fingerlist:
-        m_id = f.motor_id
-        motor_controller.pbm.set_homing_offset((m_id, 0))
-        # Check setting
-        check = False
-        trial_count = 1
-        # debug_temp = motor_controller.pbm.get_homing_offset(m_id, m_id, m_id)
-        while not check:
-            try:
-                if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0]) < 1:
+    # Check if HOMING_OFFSET need to be updated
+    finger_homing_error = []
+    for idx, f in enumerate(robot.fingerlist):
+        present_pos = motor_controller.pbm.get_present_position(f.motor_id)[0][0]
+        # pdb.set_trace()
+        if abs(present_pos) > 0.05:
+            # If the present position is away from zero for more than 0.05rad (~2.8deg)
+            finger_homing_error.append([f, present_pos])
+    if finger_homing_error:
+        # If there is any finger that needs update
+        print("The following finger's HOMING_OFFSET needs to be updated:")
+        for i in finger_homing_error:
+            print(i[0].name+", homing error: "+str(i[1]))
+        usr = input("Press ENTER to continue, or I if you insist to ignore.")
+        if usr == 'I':
+            finger_homing_error = []
+    else:
+        # No finger needs update
+        print("All HOMING_OFFSET settings are fine.")
+        usr = input("Press ENTER to continue, or C if you insist to reset HOMING_OFFSET for all fingers.")
+        if usr == 'C':
+            # User insist to reset HOMING_OFFSET for all fingers
+            for f in robot.fingerlist:
+                finger_homing_error.append([f, 0])
+
+    if finger_homing_error:
+        # If there is any finger to be updated
+        # Clear HOMING_OFFSET
+        for i in finger_homing_error:
+            m_id = i[0].motor_id
+            motor_controller.pbm.set_homing_offset((m_id, 0))
+            # Check setting
+            check = False
+            trial_count = 1
+            # debug_temp = motor_controller.pbm.get_homing_offset(m_id, m_id, m_id)
+            while not check:
+                try:
+                    if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0]) < 1:
+                        check = True
+                        print("HOMING_OFFSET cleared for %s. Trails: %d." % (i[0].name, trial_count))
+                    else:
+                        motor_controller.pbm.set_homing_offset((m_id, 0))
+                        time.sleep(0.05)
+                        trial_count += 1
+                except KeyboardInterrupt:
                     check = True
-                    print("HOMING_OFFSET cleared for %s. Trails: %d." % (f.name, trial_count))
-                else:
-                    motor_controller.pbm.set_homing_offset((m_id, 0))
-                    time.sleep(0.05)
-                    trial_count += 1
-            except KeyboardInterrupt:
-                check = True
-                print("User interrupted.")
-    # Wait for 0.2 sec after setting HOMING_OFFSET
-    time.sleep(0.2)
-    print("HOMING_OFFSET all cleared.")
+                    print("User interrupted.")
+        # Wait for 0.2 sec after setting HOMING_OFFSET
+        time.sleep(0.2)
 
-    # Get home_offset
-    # TODO: replace with bulk_read
-    for f in robot.fingerlist:
-        f.homing_offset = -(motor_controller.pbm.get_present_position(f.motor_id)[0][0])
-    # print(home_offset)
+        # Get home_offset
+        for i in finger_homing_error:
+            i[0].homing_offset = -(motor_controller.pbm.get_present_position(i[0].motor_id)[0][0])
+        # print(home_offset)
 
-    # Set Homing_Offset
-    for f in robot.fingerlist:
-        m_id = f.motor_id
-        homing_offset = f.homing_offset
-        motor_controller.pbm.set_homing_offset((m_id, homing_offset))
-        # time.sleep(0.05)
-        # Check setting
-        check = False
-        trial_count = 1
-        while not check:
-            try:
-                temp = motor_controller.pbm.get_homing_offset(m_id)[0][0]
-                print("Current homing_offset: % 2.2f" % temp)
-                if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0] - homing_offset) < 0.01:
+        # Set Homing_Offset
+        for i in finger_homing_error:
+            m_id = i[0].motor_id
+            homing_offset = i[0].homing_offset
+            motor_controller.pbm.set_homing_offset((m_id, homing_offset))
+            # time.sleep(0.05)
+            # Check setting
+            check = False
+            trial_count = 1
+            while not check:
+                try:
+                    temp = motor_controller.pbm.get_homing_offset(m_id)[0][0]
+                    print("Current homing_offset: % 2.2f" % temp)
+                    if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0] - homing_offset) < 0.01:
+                        check = True
+                        print("HOMING_OFFSET updated for %s. Trails: %d." % (i[0].name, trial_count))
+                    else:
+                        motor_controller.pbm.set_homing_offset((m_id, homing_offset))
+                        # time.sleep(0.05)
+                        trial_count += 1
+                except KeyboardInterrupt:
                     check = True
-                    print("HOMING_OFFSET updated for %s. Trails: %d." % (f.name, trial_count))
-                else:
-                    motor_controller.pbm.set_homing_offset((m_id, homing_offset))
-                    # time.sleep(0.05)
-                    trial_count += 1
-            except KeyboardInterrupt:
-                check = True
-                print("User interrupted.")
-    # Wait for 0.2 sec after setting HOMING_OFFSET
-    time.sleep(0.2)
-    print("HOMING_OFFSET all updated.")
+                    print("User interrupted.")
+        # Wait for 0.2 sec after setting HOMING_OFFSET
+        time.sleep(0.2)
+        print("HOMING_OFFSET all updated.")
 
-    # Final check
-    for f in robot.fingerlist:
-        m_id = f.motor_id
-        pos = motor_controller.pbm.get_present_position(m_id)[0][0]
-        if abs(pos) < 0.01:
-            print("%s homed." % f.name)
-        else:
-            print("%s homing abnormal!" % f.name)  # TODO: throw exception
-            usr = input("Continue? (Y/N)")
-            if usr == 'Y' or 'y':
-                pass
+        # Final check
+        for i in finger_homing_error:
+            m_id = i[0].motor_id
+            pos = motor_controller.pbm.get_present_position(m_id)[0][0]
+            if abs(pos) < 0.01:
+                print("%s homed." % i[0].name)
             else:
-                return
-
-    # print("home_offset recorded as: % 8.2f" % home_offset)
-    # print("Current Position:%5.2f" % pos)
+                print("%s homing abnormal!" % i[0].name)  # TODO: throw exception
+                usr = input("Continue? (Y/N)")
+                if usr == 'Y' or 'y':
+                    pass
+                else:
+                    return
+    # Update all finger.homing_offset
+    for f in robot.fingerlist:
+        f.homing_offset = motor_controller.pbm.get_homing_offset(f.motor_id)[0][0]
 
     if not bypass_ext_enc:
         ext_enc.connect()
         time.sleep(0.5)
-        data = ext_enc.read_angle()
+        data = ext_enc.get_angle()
         ext_enc.release()
         for idx, f in enumerate(robot.fingerlist):
             f.encoder_offset = data[idx]
@@ -582,14 +607,28 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
     motor_controller.torque_enable_all(0)
     DXL_controller.torque_enable(0)
 
-    # Build list
-    data = []
+    print("Calibration summary:")
     for f in robot.fingerlist:
-        data.append([f.name, f.motor_id, f.homing_offset, f.travel, f.encoder_offset])
-    data.append([robot.palm.name, robot.palm.motor_id, robot.palm.home, robot.palm.travel])
+        print("%s Motor ID: %d, homing_offset: % 8.2f, travel: % 8.2f, encoder_offset: % 8.2f"
+              % (f.name, f.motor_id, f.homing_offset, f.travel, f.encoder_offset))
+    if finger_homing_error:
+        print("The following fingers' homing_offset has been updated:")
+        print([i[0].name for i in finger_homing_error])
+        usr = input("It is recommended to save changed settings. Continue? (y/n)")
+        if usr == 'Y' or 'y':
+            for i in finger_homing_error:
+                motor_controller.pbm.save_config(i[0].motor_id)
+            print("Config saved to BEAR.")
+        else:
+            print("Abort saving to BEAR. Please power cycle hardware before using.")
 
     usr = input("Save Data? (y/n)")
     if usr == "y" or usr == "Y":
+        # Build list
+        data = []
+        for f in robot.fingerlist:
+            data.append([f.name, f.motor_id, f.homing_offset, f.travel, f.encoder_offset])
+        data.append([robot.palm.name, robot.palm.motor_id, robot.palm.home, robot.palm.travel])
         # Write file
         filename = 'Settings/initials.txt'
         filepath = os.path.join(str(Path(os.getcwd())), filename)
@@ -598,15 +637,9 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
             initials.write(str(i)[1:-1])
             initials.write('\n')
         initials.close()
-        print("The following data has been written into initals.txt:")
-        for f in robot.fingerlist:
-            print("%s Motor ID: %d, homing_offset: % 8.2f, travel: % 8.2f, encoder_offset: % 8.2f"
-                  % (f.name, f.motor_id, f.homing_offset, f.travel, f.encoder_offset))
-            motor_controller.pbm.save_config(f.motor_id)
-        print("Config saved to BEAR.")
         print("Full hand calibration complete.")
     else:
-        print("Abort saving.")
+        print("Abort saving to initials.txt.")
 
 
 if __name__ == '__main__':

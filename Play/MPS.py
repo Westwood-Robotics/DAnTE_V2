@@ -21,17 +21,22 @@ spi = spidev.SpiDev()
 
 class MPS_Encoder(object):  # Handles a single encoder
 
-    def __init__(self, name, chip_bus, cs, max_speed, mode, gpio=False):
+    def __init__(self, name, chip_bus, cs, max_speed, mode):
         self.name = name
         if self.name == "MA310" or "MA710":
             self.precision = 12  # These are 12bit encoders
         else:
             self.precision = 12  # Default encoder precision
+        self.conversion = 2 * math.pi / self.precision  # Conversion rate from encoder reading to [0, 2*pi)
         self.chip_bus = chip_bus
         self.cs = cs  # Chip Select, set to 0 if connected to CE0 on Pi, or 1 if connected to CE1
         self.max_speed = max_speed
         self.mode = mode  # SPI mode, this should be just 0 for most MPS encoders.
-        self.gpio = gpio  # Set to True if want to use GPIO as CS.
+        if cs != 0 or 1:
+            # Not using on board SPI pins, enable GPIO
+            self.gpio = True
+        else:
+            self.gpio = False
         if self.gpio:
             wiringpi.wiringPiSetupGpio()
             wiringpi.pinMode(self.cs, 1)
@@ -40,8 +45,7 @@ class MPS_Encoder(object):  # Handles a single encoder
     def connect(self):
         # Open a connection to a specific bus and device (chip select pin)
         if self.gpio:
-            cs = 2  # Using GPIO pins, thus set cs as something not existing
-            spi.open(self.chip_bus, cs)
+            spi.open(self.chip_bus, 0)  # Using GPIO pins, thus fool Pi with CE0
             wiringpi.digitalWrite(self.cs, 0)  # Set ChipSelect GPIO as LOW
         else:
             spi.open(self.chip_bus, self.cs)
@@ -50,29 +54,41 @@ class MPS_Encoder(object):  # Handles a single encoder
         spi.mode = self.mode
         print("SPI device connected.")
 
-    def read_angle(self):
+    def get_angle(self):
         # Read angle from device
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         data = spi.readbytes(2)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         high_byte = data[0] << 8
         low_byte = data[1]
-        angle = (high_byte + low_byte) >> 4  # Get rid of last 4 bit whatever
+        angle = ((high_byte + low_byte) >> 4) * self.conversion  # Get rid of last 4 bit whatever and convert to rad
         return angle
 
-    def read_BCT(self):
+    def get_BCT(self):
         # Read the BCT register value
         send = 0b01000010
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         spi.writebytes([send, 0])
         data = spi.readbytes(2)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         BTC = data[0]
         return BTC
 
-    def write_BTC(self, BTC):
+    def set_BTC(self, BTC):
         # Write the BCT register value
         # BTC value
         send = 0b10000010
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         spi.writebytes([send, BTC])
         time.sleep(0.02)
         data = spi.readbytes(2)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         high_byte = data[0]
         if high_byte == BTC:
             return True
@@ -89,22 +105,59 @@ class MPS_Encoder(object):  # Handles a single encoder
     def read_reg(self, reg_name):
         # Read from a register
         packet = INSTRUCTION.read + REG_DIC[reg_name]
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         spi.writebytes([packet, 0])
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
+        time.sleep(0.00075)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         data = spi.readbytes(2)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         reg_val = data[0]
+        time.sleep(0.00075)
         return reg_val
 
     def write_reg(self, reg_name, reg_val):
         # Write to a register
         packet = INSTRUCTION.write + REG_DIC[reg_name]
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         spi.writebytes([packet, reg_val])
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         time.sleep(0.02)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 0)  # Set target ChipSelect GPIO as LOW
         data = spi.readbytes(2)
+        if self.gpio:
+            wiringpi.digitalWrite(self.cs, 1)  # Set target ChipSelect GPIO as HIGH
         return_val = data[0]
         if return_val == reg_val:
             return True
         else:
             return False
+
+    def get_rotation_direction(self):
+        # Get the rotation direction of the sensor
+        data = self.read_reg('rotation_direction')
+        return data
+
+    def set_rotation_direction(self, val):
+        # Set the rotation direction of the sensor
+        if val == 1:
+            setting = 0b10000000
+            print('Setting Rotation Direction to CCW...')
+        elif val == 0:
+            setting = 0
+            print('Setting Rotation Direction to CW...')
+        else:
+            print('Invalid input.')
+            return False
+        re = self.write_reg('rotation_direction', setting)
+        return re
         
     def home(self):
         # Zero the sensor with current position
@@ -167,12 +220,12 @@ class MPS_Encoder_Cluster(object):  # Handles a cluster of encoders via utilizin
 
     def connect(self):
         # Open a connection to a specific bus
-        spi.open(self.chip_bus, 0)  # Using GPIO pins tho
+        spi.open(self.chip_bus, 0)  # Using GPIO pins tho so fool Pi with CE0
         spi.max_speed_hz = self.max_speed
         spi.mode = self.mode
         print("SPI devices connected.")
 
-    def read_angle(self):
+    def get_angle(self):
         # Read angle from all devices
         for idx, val in enumerate(self.cs):
             wiringpi.digitalWrite(val, 0)  # Set target ChipSelect GPIO as LOW

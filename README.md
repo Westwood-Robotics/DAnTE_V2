@@ -82,7 +82,7 @@ All actuators involved get pinged at first when calibration. If there is an comm
  
 ###### 0.2 Initialization
 
-Initialization is a function defined in the robot_controller module. Run initialization first after booting the system. Make sure system is started with start_robot() function.
+Initialization is a function defined in the robot_controller module. Run initialization first after booting the system. Make sure system is started with ```start_robot()``` function.
 
 The initialization checks if there is any discrepancy between the settings in the actuators registor and the data of the robot instance, then it quickly run all fingers through their rang of motion to make sure nothing is stuck. System will not function without passing initialization.
 
@@ -141,7 +141,7 @@ rc = RobotController()
 
 ###### 1.0 Start the system
 
-Before you can do anything with DAnTE, you must start the system with start_robot() function:
+Before you can do anything with DAnTE, you must start the system with ```start_robot()``` function:
 ```
 rc.start_robot()
 ```
@@ -149,7 +149,7 @@ This function pings all actuators, then reads the initals.txt and populate the v
 
 ###### 1.1 Grab
 
-Use grab(gesture, mode, \**options) function for object grabbing. 
+Use ```grab(gesture, mode, \**options)``` function for object grabbing. 
 
 This function controls the grab motion of DAnTE:
 - Grab with a gesture, tripod(Y), pinch(I) or parallel(P)
@@ -166,7 +166,7 @@ This function controls the grab motion of DAnTE:
 
 ###### 1.2 Release
 
-Use release(release_mode, \*hold_stiffness) function for releasing.
+Use ```release(release_mode, \*hold_stiffness)``` function for releasing.
 
 This function instructs DAnTE to release, with three different modes to be specified in release_mode:
 - change-to-(H)old = change to hold mode, with the hold_stiffness as specified or go with default (Settings/Macros_DAnTE)
@@ -188,12 +188,32 @@ And error code will be generated if there is any thing wrong during these operat
 
 Tune DAnTE via Macros_DAnTE, rarely need to modify Contants_DAnTE.
 
+#### 3. Forward Kinematics
+All forward kinematics related basic functions are included in the module Forward_Kinematics/forward_kin.py, and are integrated into Play.robot_controller.py
+###### 3.1 Update finger joint angles
+This is the first step to update robot with current kinematics. To do so, call ```update_angles()```
+
+This will populate all all finger.angles in the robot instance will present values. The form of this attribute is a list of finger phalanx angles: [alpha, beta, gamma, delta]
+###### 3.2 Update finger forward kinematics
+Call ```forward_kinematics(\*finger)``` with finger option to calculate the forward kinematics of a finger or all fingers based on the current values stored in finger.angles. The result will populate the corresponding finger(s)' forward kinematics attribute finger.joint_locations. The form of this attribute is an numpy array of 3D joint_locations = [MCP; PIP; DIP; Tip]
+
+Specify the finger to be updated with the \*finger option. 
+
+For example, to updated INDEX:
+```rc.forward_kinematics(INDEX)```
+If no option specified, all fingers get updated.
+
+Note that the forward kinematics will be calculated based on the present values in finger.angles so make sure to update finger angles first.
+
+###### 3.3 Visualization
+```visualization()``` function will plot the robot using the forward kinematics stored in finger.joint_locations.
+
 ## Beta Functions
 
 - Full hand kinematics and object size/shape estimation after grabbing.
 
 ## Future work
 
-- Interactive operation synced with oeprator with force
+- Interactive operation synced with operator with force
 
 

@@ -291,9 +291,7 @@ class MotorController(object):
         # TODO: replace with bulk_comm function
         # info_all = self.pbm.bulk_read((BEAR_THUMB, BEAR_INDEX, BEAR_INDEX),
         #                              ('present_position', 'present_velocity', 'present_iq'))
-        info_all = self.pbm.get_bulk_status((BEAR_INDEX, 'present_position'),
-                                            (BEAR_INDEX_M, 'present_position'),
-                                            (BEAR_THUMB, 'present_position'))
+        info_all = self.pbm.get_present_position(BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB)
         return info_all
 
     def save_congif_all(self):
