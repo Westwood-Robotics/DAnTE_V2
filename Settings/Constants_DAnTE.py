@@ -3,9 +3,8 @@ __author__ 		= "Min Sung Ahn"
 __email__ 		= "aminsung@gmail.com"
 __copyright__ 	= "Copyright 2019 RoMeLa"
 __date__ = "January 1, 1999"
-
-__version__ 	= "1.0.0"
-__status__ 		= "Prototype"
+__version__ = "0.1.0"
+__status__ = "Beta"
 
 """
 Script that holds robot constants.
@@ -51,7 +50,8 @@ c = 27.1  # Coupling link length
 l_3 = 6  # Proximal link drive arm length
 l_4 = 6.5  # Distal link drive arm length
 
-alpha_0 = [3.3746, 0.2330, 3.3561]  # alpha value [INDEX, INDEX_M, THUMB] when fingers homed and parallel (theta = 90)
+alpha_0 = [3.3746, -0.2330, 3.3561]  # alpha value [INDEX, INDEX_M, THUMB] when fingers homed and parallel (theta = 90)
+A = 28.8675  # Distance from finger center axis to palm center
 
 # ==================================================
 # ==================================================
@@ -94,7 +94,7 @@ IQID_P = 0.02
 IQID_I = 0.02
 IQID_D = 0
 
-POS_P = 3
+POS_P = 5
 POS_I = 0.005
 POS_D = 1.5
 

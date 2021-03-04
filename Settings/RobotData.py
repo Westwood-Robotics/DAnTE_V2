@@ -3,12 +3,12 @@ __author__ = "X Zhang"
 __email__ = "xzhang@westwoodrobotics.net"
 __copyright__ = "Copyright 2020 Westwood Robotics Corp."
 __date__ = "Feb 14, 2020"
-
-__version__ = "0.0.1"
-__status__ = "Prototype"
+__version__ = "0.1.0"
+__status__ = "Beta"
 
 from Settings.Constants_DAnTE import *
 import math
+import numpy as np
 
 
 class FingerDataStructure(object):
@@ -25,6 +25,7 @@ class FingerDataStructure(object):
         self.encoder = encoder  # Encoder pin# on Pi
         self.encoder_offset = -1  # Offset value for the encoder when finger is fully open
         self.angles = [0, 0, 0, 0]  # Phalanx angles, [alpha, beta, gamma, delta]
+        self.joint_locations = np.zeros([4, 3])  # 3D joint_locations = [MCP; PIP; DIP; Tip]
 
 
 class PalmDataStructure(object):
