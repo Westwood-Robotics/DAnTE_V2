@@ -108,13 +108,12 @@ def finger_fk(finger, palm_angle):
     # pdb.set_trace()
 
     # Create array joint_locations = [MCP; PIP; DIP; Tip]
-    joint_locations = np.vstack((np.transpose(MCP[0:3, 3]),
-                                 np.transpose(PIP[0:3, 3]),
-                                 np.transpose(DIP[0:3, 3]),
-                                 np.transpose(Tip[0:3, 3])))
+    finger.joint_locations = np.vstack((np.transpose(MCP[0:3, 3]),
+                                        np.transpose(PIP[0:3, 3]),
+                                        np.transpose(DIP[0:3, 3]),
+                                        np.transpose(Tip[0:3, 3])))
 
     # TODO: add phalanx directions in output
-    return joint_locations
 
 
 def visual(robot=DAnTE):
