@@ -22,7 +22,9 @@ DAnTE is controlled by a Raspberry Pi 4 by default, but it can also be paired wi
 
 #### 1. PyBEAR
 
-Please use PyBEAR from Westwood Robotics [PyBEAR-WR](https://github.com/Westwood-Robotics/PyBEAR-WR), and make sure that you are on the develop branch. 
+Please use PyBEAR from Westwood Robotics [PyBEAR-WR](https://github.com/Westwood-Robotics/PyBEAR-WR).
+
+Must use PyBEAR 0.0.3 or higher.
 
 Due to the differences in data return format, the current RoMeLa PyBEAR will **NOT** work with DAnTE V2.
 

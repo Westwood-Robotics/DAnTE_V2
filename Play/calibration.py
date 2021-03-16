@@ -256,7 +256,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
         check = False
         print("Pinging %s..." % f.name)
         while not check:
-            if not bool(motor_controller.pbm.ping(f.motor_id)):
+            if not bool(motor_controller.pbm.ping(f.motor_id)[0]):
                 trail += 1
                 if trail > int(PING_TRAIL_COUNT / 2):
                     # WARNING about bad communication

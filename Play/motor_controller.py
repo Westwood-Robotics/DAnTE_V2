@@ -124,7 +124,7 @@ class MotorController(object):
         Set the actuator into a desired mode.
         Enforced
 
-        :param int mode: Desired mode. (0: torque, 1: velocity, 2: position, 3: force)
+        :param str mode: Desired mode. (torque, velocity, position, force)
         """
         if mode == 'position':
             m = 2

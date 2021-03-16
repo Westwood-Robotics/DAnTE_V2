@@ -56,7 +56,8 @@ approach_command_max = 3
 default_approach_speed = 1
 default_approach_stiffness = 1
 default_detect_current = 0.42
-default_final_strength = 1
+default_final_stiffness = 1
+default_preload = 0.5
 default_max_iq = 1.5
 
 # ------------------------------
