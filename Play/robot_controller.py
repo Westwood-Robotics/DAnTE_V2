@@ -13,7 +13,7 @@ from pathlib import Path
 from Play.motor_controller import MotorController
 from Play.dynamixel_controller import DynamixelController
 from Settings.Robot import *
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import math
 
 if EXTERNAL_ENC:
@@ -872,12 +872,12 @@ class RobotController(object):
                     iq_comp_log_all.append([data[i] for data in iq_comp_log])
                     acceleration_log_all.append([data[i] for data in acceleration_log])
 
-                # Plot here
-                id = 0
-                plt.plot(time_log, iq_comp_log_all[0], 'r-', time_log, iq_comp_log_all[1], 'k-', time_log, iq_comp_log_all[2], 'b-')
-                # plt.plot(time_log, delta_time_log)
-                plt.grid(True)
-                plt.show()
+                # # Plot here
+                # id = 0
+                # plt.plot(time_log, iq_comp_log_all[0], 'r-', time_log, iq_comp_log_all[1], 'k-', time_log, iq_comp_log_all[2], 'b-')
+                # # plt.plot(time_log, delta_time_log)
+                # plt.grid(True)
+                # plt.show()
             if error:
                 self.MC.torque_enable_all(0)
                 print("Grab error. System disabled.")
@@ -1109,14 +1109,14 @@ class RobotController(object):
                     iq_error_log_all.append([data[i] for data in iq_error_log])
                     grip_command_log_all.append([data[i] for data in grip_command_log])
 
-                # Plot here
-                id = 2
-                # plt.plot(time_log, iq_comp_log_all[0], 'r-', time_log, iq_comp_log_all[1], 'k-', time_log, iq_comp_log_all[2], 'b-')
-                plt.plot(time_log, iq_log_all[0], 'r-',
-                         time_log, iq_log_all[1], 'b-',
-                         time_log, iq_log_all[2], 'g-')
-                plt.grid(True)
-                plt.show()
+                # # Plot here
+                # id = 2
+                # # plt.plot(time_log, iq_comp_log_all[0], 'r-', time_log, iq_comp_log_all[1], 'k-', time_log, iq_comp_log_all[2], 'b-')
+                # plt.plot(time_log, iq_log_all[0], 'r-',
+                #          time_log, iq_log_all[1], 'b-',
+                #          time_log, iq_log_all[2], 'g-')
+                # plt.grid(True)
+                # plt.show()
 
         # TODO: Check error
 
