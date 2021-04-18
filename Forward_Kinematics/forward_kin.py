@@ -16,9 +16,9 @@ import numpy as np
 import pdb
 from Settings.Robot import *
 
-from mpl_toolkits import mplot3d
+# from mpl_toolkits import mplot3d
 #matplotlib inline
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 # Solve for gamma and delta
@@ -116,24 +116,24 @@ def finger_fk(finger, palm_angle):
     # TODO: add phalanx directions in output
 
 
-def visual(robot=DAnTE):
-    # Plot DT02
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    outline_x = [-33.660, -44.919, -11.258, 11.258, 44.919, 33.660, -33.660]
-    outline_y = [-32.434, -12.934, 45.368, 45.368, -12.934, -32.434, -32.434]
-    outline_z = [0, 0, 0, 0, 0, 0, 0]
-    ax.plot3D(outline_x, outline_y, outline_z, 'gray')  # Plot PALM outline
-    ax.plot3D([0, 10], [0, 0], [0, 0], 'red')  # Plot x axis
-    ax.plot3D([0, 0], [0, 10], [0, 0], 'green')  # Plot y axis
-    ax.plot3D([0, 0], [0, 0], [0, 10], 'blue')  # Plot z axis
-
-    loc_INDEX = np.transpose(robot.fingerlist[0].joint_locations)
-    loc_INDEX_M = np.transpose(robot.fingerlist[1].joint_locations)
-    loc_THUMB = np.transpose(robot.fingerlist[2].joint_locations)
-
-    ax.plot3D(loc_INDEX[0, :], loc_INDEX[1, :], loc_INDEX[2, :], 'black')  # Plot INDEX
-    ax.plot3D(loc_INDEX_M[0, :], loc_INDEX_M[1, :], loc_INDEX_M[2, :], 'black')  # Plot INDEX_M
-    ax.plot3D(loc_THUMB[0, :], loc_THUMB[1, :], loc_THUMB[2, :], 'black')  # Plot THUMB
-
-    plt.show()
+# def visual(robot=DAnTE):
+#     # Plot DT02
+#     fig = plt.figure()
+#     ax = plt.axes(projection='3d')
+#     outline_x = [-33.660, -44.919, -11.258, 11.258, 44.919, 33.660, -33.660]
+#     outline_y = [-32.434, -12.934, 45.368, 45.368, -12.934, -32.434, -32.434]
+#     outline_z = [0, 0, 0, 0, 0, 0, 0]
+#     ax.plot3D(outline_x, outline_y, outline_z, 'gray')  # Plot PALM outline
+#     ax.plot3D([0, 10], [0, 0], [0, 0], 'red')  # Plot x axis
+#     ax.plot3D([0, 0], [0, 10], [0, 0], 'green')  # Plot y axis
+#     ax.plot3D([0, 0], [0, 0], [0, 10], 'blue')  # Plot z axis
+#
+#     loc_INDEX = np.transpose(robot.fingerlist[0].joint_locations)
+#     loc_INDEX_M = np.transpose(robot.fingerlist[1].joint_locations)
+#     loc_THUMB = np.transpose(robot.fingerlist[2].joint_locations)
+#
+#     ax.plot3D(loc_INDEX[0, :], loc_INDEX[1, :], loc_INDEX[2, :], 'black')  # Plot INDEX
+#     ax.plot3D(loc_INDEX_M[0, :], loc_INDEX_M[1, :], loc_INDEX_M[2, :], 'black')  # Plot INDEX_M
+#     ax.plot3D(loc_THUMB[0, :], loc_THUMB[1, :], loc_THUMB[2, :], 'black')  # Plot THUMB
+#
+#     plt.show()
