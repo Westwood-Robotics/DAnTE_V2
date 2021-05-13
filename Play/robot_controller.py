@@ -749,9 +749,15 @@ class RobotController(object):
             iq_comp_log = []
             acceleration_log = []
 
+            sequential_loop_time = [0,0,0]
+
             while not (error or self.robot.contact):
+                # Main GRAB loop
                 try:
+                    # Get time stamp
                     previous_time = present_time
+                    present_time = time.time()
+                    delta_time = present_time - previous_time
 
                     # Collect status
                     if self.robot.palm.gesture == 'I':
@@ -761,9 +767,7 @@ class RobotController(object):
                         status = self.MC.get_present_status_all()
                         finger_count = 3
 
-                    # Get time stamp
-                    present_time = time.time()
-                    delta_time = present_time - previous_time
+                    sequential_loop_time[0] = time.time()-present_time # Time took to collect status
 
                     # Process data
                     # Motor Error
@@ -780,7 +784,6 @@ class RobotController(object):
                     acceleration = [
                         SMOOTHING * (velocity[i] - prev_velocity[i]) / delta_time + (1 - SMOOTHING) * acceleration[i]
                         for i in range(finger_count)]
-
                     # Get compensated iq
                     iq_comp = [abs(abs(iq[i] - acceleration[i] * ACC_COMP_FACTOR)
                                    - (abs(position[i]) < SPRING_COMP_START) * 0.2
@@ -794,6 +797,9 @@ class RobotController(object):
                     # Build approach commands
                     velocity_error = [goal_approach_speed[i] - velocity[i] for i in range(finger_count)]
                     velocity_error_int = [velocity_error[i] * delta_time + velocity_error_int[i] for i in range(finger_count)]
+
+                    # Time took to process data
+                    sequential_loop_time[1] = time.time() - present_time - sequential_loop_time[0]
 
                     # Determine if contact and Switch to torque mode and maintain detect iq upon contact
                     for idx in range(finger_count):
@@ -813,7 +819,6 @@ class RobotController(object):
                                     # Get sign and balance factor for the finger
                                     iq_sign_balance = (self.robot.fingerlist[idx].mirrored - (not self.robot.fingerlist[idx].mirrored))*self.balance_factor[idx]
                                     goal_iq[idx] = iq_sign_balance*(self.detect_current + (abs(position[idx]) > SPRING_COMP_START) * (0.18 + 0.06 * (abs(position[idx]) - SPRING_COMP_START)))
-                                    # approach_command[idx] = position[idx]
                                     # Send goal_iq
                                     print('Finger iq:', goal_iq[idx])
                                     # Set into torque mode
@@ -829,12 +834,16 @@ class RobotController(object):
                             # Keep sending iq command
                             self.MC.pbm.set_goal_iq((self.robot.finger_ids[idx], goal_iq[idx]))
 
+                        # Time took to command
+                        sequential_loop_time[2] = time.time() - present_time - sequential_loop_time[1]
+
                     self.robot.contact = contact_count == finger_count
 
                     # # Clamp approach_command
                     # approach_command = [max(min(i, approach_command_max), -approach_command_max) for i in approach_command]
 
                     print("Loop time: %f" % delta_time)
+                    print(sequential_loop_time)
 
                     # Data logging
                     if self.logging:
