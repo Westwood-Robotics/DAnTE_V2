@@ -834,6 +834,8 @@ class RobotController(object):
                     # # Clamp approach_command
                     # approach_command = [max(min(i, approach_command_max), -approach_command_max) for i in approach_command]
 
+                    print("Loop time: %f" % delta_time)
+
                     # Data logging
                     if self.logging:
                         delta_time_log.append(delta_time)
