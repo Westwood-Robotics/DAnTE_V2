@@ -264,6 +264,34 @@ class MotorController(object):
                                             (BEAR_THUMB, 'present_position', 'present_velocity', 'present_iq'))
         return info_all
 
+    def grab_loop_comm(self, gesture, goal_pos, goal_iq):
+        """
+        Main grab loop communication function using bulk_read_write.
+
+        :param str gesture: The present gesture of DAnTE
+        :param list goal_pos: The goal position command to send
+        :param list goal_iq: The goal iq command to send
+
+        :return: present info [[pos, vel, iq], ...]
+        :rtype: list of list
+        """
+        command = []
+        for i in range(len(goal_pos)):
+            command.append([goal_pos[i], goal_iq[i]])
+
+        if gesture == 'I':
+            # Pinch mode, not using THUMB
+            info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
+                                                ['present_position', 'present_velocity', 'present_iq'],
+                                                ['goal_position', 'goal_iq'],
+                                                command)
+        else:
+            info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                                                ['present_position', 'present_velocity', 'present_iq'],
+                                                ['goal_position', 'goal_iq'],
+                                                command)
+        return info_all
+
     def get_present_status_index(self):
         """
         Get present status of all fingers
@@ -288,10 +316,8 @@ class MotorController(object):
         """
         Get present position of all fingers
         """
-        # TODO: replace with bulk_comm function
-        # info_all = self.pbm.bulk_read((BEAR_THUMB, BEAR_INDEX, BEAR_INDEX),
-        #                              ('present_position', 'present_velocity', 'present_iq'))
-        info_all = self.pbm.get_present_position(BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB)
+        info_all = self.pbm.bulk_read([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB], ['present_position'])
+        info_all = [i[0][0] for i in info_all]
         return info_all
 
     def save_congif_all(self):

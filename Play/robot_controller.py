@@ -258,6 +258,7 @@ class RobotController(object):
             return False
 
         abnormal = [0, 0, 0, 0]
+        print("Starting initialization sequence...")
         # [Fingers, Palm] abnormal code:
         # 10000 External encoder offset discrepancy
         # 01000 Failed to travel to home
@@ -297,19 +298,19 @@ class RobotController(object):
         # 1. Compare home_offset
         for i in range(3):
             if round(self.robot.fingerlist[i].homing_offset, 2) != round(
-                    self.MC.pbm.get_homing_offset(self.robot.finger_ids[i])[0][0], 2):
+                    self.MC.pbm.get_homing_offset(self.robot.finger_ids[i])[0][0][0], 2):
                 abnormal[i] = abnormal[i] | 0b0001
                 print("%s home_offset abnormal." % self.robot.fingerlist[i].name)
         # 2. Current position with in range
         present_pos = self.MC.pbm.get_present_position(BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB)
         for i, pos in enumerate(present_pos):
             if self.robot.fingerlist[i].mirrored:
-                if pos[0] < -0.1 or pos[0] > self.robot.fingerlist[i].travel + 0.1:
+                if pos[0][0] < -0.1 or pos[0][0] > self.robot.fingerlist[i].travel + 0.1:
                     abnormal[i] = abnormal[i] | 0b0010
                     print("%s present_pos out of range." % self.robot.fingerlist[i].name)
                     print(pos[0])
             else:
-                if pos[0] > 0.1 or pos[0] < self.robot.fingerlist[i].travel - 0.1:
+                if pos[0][0] > 0.1 or pos[0][0] < self.robot.fingerlist[i].travel - 0.1:
                     abnormal[i] = abnormal[i] | 0b0010
                     print("%s present_pos out of range." % self.robot.fingerlist[i].name)
                     print(pos[0])
@@ -605,7 +606,7 @@ class RobotController(object):
         check = 0
         while check < finger_count:
             for i in range(finger_count):
-                if round(self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0], 2) != d_gain:
+                if round(self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0][0], 2) != d_gain:
                     self.MC.pbm.set_d_gain_force((self.robot.finger_ids[i], d_gain))
                 else:
                     check += 1
@@ -616,7 +617,7 @@ class RobotController(object):
         check = 0
         while check < finger_count:
             for i in range(finger_count):
-                if round(self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0], 2) != p_gain:
+                if round(self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0][0], 2) != p_gain:
                     self.MC.pbm.set_p_gain_force((self.robot.finger_ids[i], p_gain))
                 else:
                     check += 1
@@ -710,7 +711,7 @@ class RobotController(object):
             # Enforce writing
             check = False
             while not check:
-                if round(self.MC.pbm.get_limit_iq_max(THUMB.motor_id)[0][0], 4) == round(2 * self.max_iq, 4):
+                if round(self.MC.pbm.get_limit_iq_max(THUMB.motor_id)[0][0][0], 4) == round(2 * self.max_iq, 4):
                     check = True
 
         # usr = input("Press enter to grab...")
@@ -720,6 +721,10 @@ class RobotController(object):
             print("Please release contact first.")
             return
         else:
+            if self.robot.palm.gesture == 'I':
+                finger_count = 2
+            else:
+                finger_count = 3
             print("Approaching...")
             # Get start_time
             # Python Version 3.7 or above
@@ -738,7 +743,7 @@ class RobotController(object):
             iq_comp = [0, 0, 0]
             goal_iq = [0, 0, 0]
             position = [0, 0, 0]
-            approach_command = [0, 0, 0]
+            goal_position = self.MC.get_present_position_all() # populate with present pos
 
             # Status logging
             velocity_log = []
@@ -759,15 +764,10 @@ class RobotController(object):
                     present_time = time.time()
                     delta_time = present_time - previous_time
 
-                    # Collect status
-                    if self.robot.palm.gesture == 'I':
-                        status = self.MC.get_present_status_index()
-                        finger_count = 2
-                    else:
-                        status = self.MC.get_present_status_all()
-                        finger_count = 3
+                    # Collect status and send command
+                    status = self.MC.grab_loop_comm(self.robot.palm.gesture, goal_position, goal_iq)
 
-                    sequential_loop_time[0] = time.time()-present_time # Time took to collect status
+                    sequential_loop_time[0] = time.time()-present_time # Time took to collect status and write
 
                     # Process data
                     # Motor Error
@@ -802,15 +802,18 @@ class RobotController(object):
                     sequential_loop_time[1] = time.time() - present_time - sequential_loop_time[0]
 
                     # Determine if contact and Switch to torque mode and maintain detect iq upon contact
+                    # Calculate goal_iq/goal_position and switch mode for contacted
+                    # Just send both goal commands, let BEAR choose which to use.
                     for idx in range(finger_count):
                         if not self.robot.fingerlist[idx].contact:
                             if iq_comp[idx] > self.detect_current:
                                 if detect_count[idx]:
                                     detect_count[idx] -= 1
                                     # Build command
-                                    approach_command[idx] = position[idx] + approach_p * velocity_error[idx] + approach_i * velocity_error_int[idx] - approach_d * acceleration[idx]
-                                    self.MC.pbm.set_goal_position((self.robot.finger_ids[idx], approach_command[idx]))
-
+                                    goal_position[idx] = position[idx] \
+                                                         + approach_p * velocity_error[idx] \
+                                                         + approach_i * velocity_error_int[idx] \
+                                                         - approach_d * acceleration[idx]
                                 else:
                                     self.robot.fingerlist[idx].contact = True
                                     print('Finger contact:', self.robot.fingerlist[idx].name, position[idx])
@@ -823,19 +826,18 @@ class RobotController(object):
                                     print('Finger iq:', goal_iq[idx])
                                     # Set into torque mode
                                     self.MC.set_mode(self.robot.finger_ids[idx], 'torque')
-                                    self.MC.pbm.set_goal_iq((self.robot.finger_ids[idx], goal_iq[idx]))
                                     contact_count += 1
                             else:
                                 # Build command
                                 approach_command[idx] = position[idx] + approach_p * velocity_error[idx] + approach_i * velocity_error_int[idx] - approach_d * acceleration[idx]
-                                self.MC.pbm.set_goal_position((self.robot.finger_ids[idx], approach_command[idx]))
                         else:
                             # This finger has contacted
                             # Keep sending iq command
-                            self.MC.pbm.set_goal_iq((self.robot.finger_ids[idx], goal_iq[idx]))
+                            pass
+                    # bulk_read_write at loop head.
 
-                        # Time took to command
-                        sequential_loop_time[2] = time.time() - present_time - sequential_loop_time[1]
+                    # Time took to calculate command
+                    sequential_loop_time[2] = time.time() - present_time - sequential_loop_time[1]
 
                     self.robot.contact = contact_count == finger_count
 
@@ -974,7 +976,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0], 4) != goal_position[i]:
+                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0][0], 4) != goal_position[i]:
                         self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
                     else:
                         check += 1
@@ -1196,7 +1198,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if round(self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0], 2) != hold_d:
+                    if round(self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0][0], 2) != hold_d:
                         self.MC.pbm.set_d_gain_force((self.robot.finger_ids[i], hold_d))
                     else:
                         check += 1
@@ -1207,7 +1209,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if round(self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0], 2) != hold_p:
+                    if round(self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0][0], 2) != hold_p:
                         self.MC.pbm.set_p_gain_force((self.robot.finger_ids[i], hold_p))
                     else:
                         check += 1
@@ -1225,7 +1227,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0], 4) != goal_position[i]:
+                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0][0], 4) != goal_position[i]:
                         self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
                     else:
                         check += 1
@@ -1264,7 +1266,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0], 4) != goal_position[i]:
+                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0][0], 4) != goal_position[i]:
                         self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
                     else:
                         check += 1
@@ -1273,7 +1275,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if abs(self.MC.pbm.get_present_position(self.robot.finger_ids[i])[0][0] - goal_position[i]) < 0.3:
+                    if abs(self.MC.pbm.get_present_position(self.robot.finger_ids[i])[0][0][0] - goal_position[i])<0.3:
                         # This finger has come close enough to release point
                         check += 1
             print("Released.")
@@ -1292,8 +1294,7 @@ class RobotController(object):
             print("Robot not initialized. Exit.")
             return error
         # Update finger joint angles
-        data = self.MC.get_present_position_all()
-        present_pos = [i[0] for i in data]  # [Index, Index_M, THUMB]
+        present_pos = self.MC.get_present_position_all()  # [Index, Index_M, THUMB]
         # Get ext_enc reading:
         self.ext_enc.connect()
         time.sleep(0.2)

@@ -23,205 +23,205 @@ import pdb
 
 # -----------------------------
 # Function for finger calibration
-
-
-def calibration_single(f, motor_controller):
-    # Single finger calibration.
-    # Specify the finger with f
-    # TODO: if encoder is not None, read encoder initials
-
-    m_id = f.motor_id
-    motor_controller.init_driver(m_id)
-
-    # Set Mode
-    motor_controller.set_mode(m_id, 'velocity')
-
-    # Set Limits
-    motor_controller.pbm.set_limit_iq_max((m_id, 1.5))
-    motor_controller.pbm.set_limit_velocity_max((m_id, 2*VEL_CAL))
-
-    # Set PID Gains
-    # Velocity
-    motor_controller.pbm.set_p_gain_velocity((m_id, 0.2))
-    motor_controller.pbm.set_i_gain_velocity((m_id, 0.0005))
-
-    # Position
-    motor_controller.pbm.set_p_gain_position((m_id, 0.15))
-
-    # Home finger
-    usr = input("Move the finger to the home position press enter.\n")
-
-    # Clear HOMING_OFFSET
-    motor_controller.pbm.set_homing_offset((m_id, 0))
-    # Check setting
-    check = False
-    trial_count = 1
-    while not check:
-        try:
-            if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0]) < 1:
-                check = True
-                print("HOMING_OFFSET cleared. Trails: %d." % trial_count)
-            else:
-                motor_controller.pbm.set_homing_offset((m_id, 0))
-                time.sleep(0.05)
-                trial_count += 1
-        except KeyboardInterrupt:
-            check = True
-            print("User interrupted.")
-    # Wait for 1 sec after setting HOMING_OFFSET
-    time.sleep(1)
-
-    # Get home_offset
-    home_offset = -motor_controller.pbm.get_present_position(m_id)[0][0]
-    # print(home_offset)
-
-    # Set Homing_Offset
-    motor_controller.pbm.set_homing_offset((m_id, home_offset))
-    # time.sleep(0.05)
-    # Check setting
-    check = False
-    trial_count = 1
-    while not check:
-        try:
-            temp = motor_controller.pbm.get_homing_offset(m_id)[0][0]
-            print("home_offset set as % 8.2f" % temp)
-            if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0] - home_offset) < 1:
-                check = True
-                print("HOMING_OFFSET updated. Trails: %d." % trial_count)
-            else:
-                motor_controller.pbm.set_homing_offset((m_id, home_offset))
-                # time.sleep(0.05)
-                trial_count += 1
-        except KeyboardInterrupt:
-            check = True
-            print("User interrupted.")
-    # Wait for 1 sec after setting HOMING_OFFSET
-    time.sleep(1)
-
-    # Final check
-    pos = motor_controller.pbm.get_present_position(m_id)[0][0]
-    if abs(pos) < 0.15:
-        print("Finger homed.")
-    else:
-        print("Homing abnormal!")  # TODO: throw exception
-
-    print("home_offset recorded as: % 8.2f" % home_offset)
-    print("Current Position:%5.2f" % pos)
-
-    # Get end_pos
-    user = input("Do you want to set the end limit manually? (y/n)")
-    if user == "y" or user == "Y":
-        user = input("Move the finger to the end limit and press enter.\n")
-        end_pos = motor_controller.pbm.get_present_position(m_id)[0][0]
-        print("end_pos recorded as: % 8.2f" % end_pos)
-    elif user == "n" or user == "N":
-        # Look for End-Pos automatically
-        run = True
-        # Enable Torque
-        motor_controller.torque_enable(m_id, 1)
-        time.sleep(0.1)
-        # Goal Velocity
-        if f.mirrored:
-            goal_velocity = 5
-        else:
-            goal_velocity = -5  # -5 for THUMB and INDEX
-        motor_controller.pbm.set_goal_velocity((m_id, goal_velocity))
-        time.sleep(0.5)
-        print("Looking for end_pos...")
-        while run:
-            try:
-                status = motor_controller.pbm.get_bulk_status((m_id, 'present_velocity', 'present_iq'))
-                vel = status[0][0][0]
-                current = status[0][0][1]
-                if abs(vel)<0.1 and abs(current) > 1:
-                    print("end_pos reached.")
-                    run = False
-                    end_pos = motor_controller.pbm.get_present_position(m_id)[0][0]
-                    print("end_pos acquired.")
-                    end_i = motor_controller.pbm.get_present_iq(m_id)[0][0]
-                    print("end_i acquired.")
-                    motor_controller.torque_enable(m_id, 0)
-                    print("end_pos recorded as: % 8.2f" % end_pos)
-                    print("End current was %2.2f" % end_i)
-
-                # vel = motor_controller.pbm.get_present_velocity(m_id)[0][0]
-                # print("Vel acquired. %2.2f" % abs(vel))
-                # if abs(vel) < 0.1:
-                #     print("Vel is small.")
-                #     time.sleep(0.5)
-                #     current = motor_controller.pbm.get_present_iq(m_id)[0][0]
-                #     print("Current acquired.")
-                #     if abs(current) > 1:
-                #         print("Current is high.")
-                #         run = False
-                #         end_pos = motor_controller.pbm.get_present_position(m_id)[0][0]
-                #         print("end_pos acquired.")
-                #         end_i = motor_controller.pbm.get_present_iq(m_id)[0][0]
-                #         print("end_i acquired.")
-                #         motor_controller.torque_enable(m_id, 0)
-                #         print("end_pos recorded as: % 8.2f" % end_pos)
-                #         print("End current was %2.2f" % end_i)
-            except KeyboardInterrupt:
-                run = False
-                motor_controller.torque_enable(m_id, 0)
-                end_pos = None
-                print("User interrupted.")
-
-    # # Set position limits
-    # if end_pos is None:
-    #  print("User interrupted.")
-    # else:
-    #  limit_margin = 450
-    #  # Set Finger Limit
-    #  if goal_velocity<0:
-    #      motor_controller.pbm.set_limit_position_min((m_id,end_pos-limit_margin))
-    #      bear.set_limit_position_max((m_id,limit_margin))
-    #  else:
-    #      bear.set_limit_position_min((m_id,-limit_margin))
-    #      bear.set_limit_position_max((m_id,end_pos+limit_margin))
-
-    # Reset
-    # Set Position Gain
-    motor_controller.pbm.set_p_gain_position((m_id, 0.15))
-    motor_controller.pbm.set_i_gain_position((m_id, 0))
-    motor_controller.pbm.set_d_gain_position((m_id, 0.05))
-
-    user = input("Reset finger? (y/n)")
-    if user == "y" or user == "Y":
-        time.sleep(0.2)
-        print("Finger resetting...")
-        # Set Mode and Limit
-        motor_controller.set_mode(m_id, 'position')
-        motor_controller.pbm.set_limit_iq_max((m_id, 1.8))
-        run = True
-        # Enable torque and go to Home
-        motor_controller.torque_enable(m_id, 1)
-        motor_controller.pbm.set_goal_position((m_id, 150))
-        time.sleep(0.5)
-        # pdb.set_trace()
-        while run:
-            try:
-                vel = motor_controller.pbm.get_present_velocity(m_id)[0][0]
-                if abs(vel) < 0.1:
-                    run = False
-                    time.sleep(0.5)
-                    motor_controller.torque_enable(m_id, 0)
-                #time.sleep(0.05)
-            except KeyboardInterrupt:
-                run = False
-                print("User interrupted.")
-
-    # Build list
-    positions = str("%d,%f,%f" % (m_id, home_offset, end_pos))
-    # Write file
-    filename = 'Settings/initials_single.txt'
-    filepath = os.path.join(str(Path(os.getcwd()).parent), filename)
-    initials = open(filepath, 'w')
-    initials.write(positions)
-    initials.close()
-    print("The following data has been written into initials_single.txt:")
-    print("Motor ID: %d" % m_id, "home_offset: % 8.2f" % home_offset, "end_pos: % 8.2f" % end_pos)
-    print("Finger calibration complete.")
+#
+#
+# def calibration_single(f, motor_controller):
+#     # Single finger calibration.
+#     # Specify the finger with f
+#     # TODO: if encoder is not None, read encoder initials
+#
+#     m_id = f.motor_id
+#     motor_controller.init_driver(m_id)
+#
+#     # Set Mode
+#     motor_controller.set_mode(m_id, 'velocity')
+#
+#     # Set Limits
+#     motor_controller.pbm.set_limit_iq_max((m_id, 1.5))
+#     motor_controller.pbm.set_limit_velocity_max((m_id, 2*VEL_CAL))
+#
+#     # Set PID Gains
+#     # Velocity
+#     motor_controller.pbm.set_p_gain_velocity((m_id, 0.2))
+#     motor_controller.pbm.set_i_gain_velocity((m_id, 0.0005))
+#
+#     # Position
+#     motor_controller.pbm.set_p_gain_position((m_id, 0.15))
+#
+#     # Home finger
+#     usr = input("Move the finger to the home position press enter.\n")
+#
+#     # Clear HOMING_OFFSET
+#     motor_controller.pbm.set_homing_offset((m_id, 0))
+#     # Check setting
+#     check = False
+#     trial_count = 1
+#     while not check:
+#         try:
+#             if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0]) < 1:
+#                 check = True
+#                 print("HOMING_OFFSET cleared. Trails: %d." % trial_count)
+#             else:
+#                 motor_controller.pbm.set_homing_offset((m_id, 0))
+#                 time.sleep(0.05)
+#                 trial_count += 1
+#         except KeyboardInterrupt:
+#             check = True
+#             print("User interrupted.")
+#     # Wait for 1 sec after setting HOMING_OFFSET
+#     time.sleep(1)
+#
+#     # Get home_offset
+#     home_offset = -motor_controller.pbm.get_present_position(m_id)[0][0]
+#     # print(home_offset)
+#
+#     # Set Homing_Offset
+#     motor_controller.pbm.set_homing_offset((m_id, home_offset))
+#     # time.sleep(0.05)
+#     # Check setting
+#     check = False
+#     trial_count = 1
+#     while not check:
+#         try:
+#             temp = motor_controller.pbm.get_homing_offset(m_id)[0][0]
+#             print("home_offset set as % 8.2f" % temp)
+#             if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0] - home_offset) < 1:
+#                 check = True
+#                 print("HOMING_OFFSET updated. Trails: %d." % trial_count)
+#             else:
+#                 motor_controller.pbm.set_homing_offset((m_id, home_offset))
+#                 # time.sleep(0.05)
+#                 trial_count += 1
+#         except KeyboardInterrupt:
+#             check = True
+#             print("User interrupted.")
+#     # Wait for 1 sec after setting HOMING_OFFSET
+#     time.sleep(1)
+#
+#     # Final check
+#     pos = motor_controller.pbm.get_present_position(m_id)[0][0]
+#     if abs(pos) < 0.15:
+#         print("Finger homed.")
+#     else:
+#         print("Homing abnormal!")  # TODO: throw exception
+#
+#     print("home_offset recorded as: % 8.2f" % home_offset)
+#     print("Current Position:%5.2f" % pos)
+#
+#     # Get end_pos
+#     user = input("Do you want to set the end limit manually? (y/n)")
+#     if user == "y" or user == "Y":
+#         user = input("Move the finger to the end limit and press enter.\n")
+#         end_pos = motor_controller.pbm.get_present_position(m_id)[0][0]
+#         print("end_pos recorded as: % 8.2f" % end_pos)
+#     elif user == "n" or user == "N":
+#         # Look for End-Pos automatically
+#         run = True
+#         # Enable Torque
+#         motor_controller.torque_enable(m_id, 1)
+#         time.sleep(0.1)
+#         # Goal Velocity
+#         if f.mirrored:
+#             goal_velocity = 5
+#         else:
+#             goal_velocity = -5  # -5 for THUMB and INDEX
+#         motor_controller.pbm.set_goal_velocity((m_id, goal_velocity))
+#         time.sleep(0.5)
+#         print("Looking for end_pos...")
+#         while run:
+#             try:
+#                 status = motor_controller.pbm.get_bulk_status((m_id, 'present_velocity', 'present_iq'))
+#                 vel = status[0][0][0]
+#                 current = status[0][0][1]
+#                 if abs(vel)<0.1 and abs(current) > 1:
+#                     print("end_pos reached.")
+#                     run = False
+#                     end_pos = motor_controller.pbm.get_present_position(m_id)[0][0]
+#                     print("end_pos acquired.")
+#                     end_i = motor_controller.pbm.get_present_iq(m_id)[0][0]
+#                     print("end_i acquired.")
+#                     motor_controller.torque_enable(m_id, 0)
+#                     print("end_pos recorded as: % 8.2f" % end_pos)
+#                     print("End current was %2.2f" % end_i)
+#
+#                 # vel = motor_controller.pbm.get_present_velocity(m_id)[0][0]
+#                 # print("Vel acquired. %2.2f" % abs(vel))
+#                 # if abs(vel) < 0.1:
+#                 #     print("Vel is small.")
+#                 #     time.sleep(0.5)
+#                 #     current = motor_controller.pbm.get_present_iq(m_id)[0][0]
+#                 #     print("Current acquired.")
+#                 #     if abs(current) > 1:
+#                 #         print("Current is high.")
+#                 #         run = False
+#                 #         end_pos = motor_controller.pbm.get_present_position(m_id)[0][0]
+#                 #         print("end_pos acquired.")
+#                 #         end_i = motor_controller.pbm.get_present_iq(m_id)[0][0]
+#                 #         print("end_i acquired.")
+#                 #         motor_controller.torque_enable(m_id, 0)
+#                 #         print("end_pos recorded as: % 8.2f" % end_pos)
+#                 #         print("End current was %2.2f" % end_i)
+#             except KeyboardInterrupt:
+#                 run = False
+#                 motor_controller.torque_enable(m_id, 0)
+#                 end_pos = None
+#                 print("User interrupted.")
+#
+#     # # Set position limits
+#     # if end_pos is None:
+#     #  print("User interrupted.")
+#     # else:
+#     #  limit_margin = 450
+#     #  # Set Finger Limit
+#     #  if goal_velocity<0:
+#     #      motor_controller.pbm.set_limit_position_min((m_id,end_pos-limit_margin))
+#     #      bear.set_limit_position_max((m_id,limit_margin))
+#     #  else:
+#     #      bear.set_limit_position_min((m_id,-limit_margin))
+#     #      bear.set_limit_position_max((m_id,end_pos+limit_margin))
+#
+#     # Reset
+#     # Set Position Gain
+#     motor_controller.pbm.set_p_gain_position((m_id, 0.15))
+#     motor_controller.pbm.set_i_gain_position((m_id, 0))
+#     motor_controller.pbm.set_d_gain_position((m_id, 0.05))
+#
+#     user = input("Reset finger? (y/n)")
+#     if user == "y" or user == "Y":
+#         time.sleep(0.2)
+#         print("Finger resetting...")
+#         # Set Mode and Limit
+#         motor_controller.set_mode(m_id, 'position')
+#         motor_controller.pbm.set_limit_iq_max((m_id, 1.8))
+#         run = True
+#         # Enable torque and go to Home
+#         motor_controller.torque_enable(m_id, 1)
+#         motor_controller.pbm.set_goal_position((m_id, 150))
+#         time.sleep(0.5)
+#         # pdb.set_trace()
+#         while run:
+#             try:
+#                 vel = motor_controller.pbm.get_present_velocity(m_id)[0][0]
+#                 if abs(vel) < 0.1:
+#                     run = False
+#                     time.sleep(0.5)
+#                     motor_controller.torque_enable(m_id, 0)
+#                 #time.sleep(0.05)
+#             except KeyboardInterrupt:
+#                 run = False
+#                 print("User interrupted.")
+#
+#     # Build list
+#     positions = str("%d,%f,%f" % (m_id, home_offset, end_pos))
+#     # Write file
+#     filename = 'Settings/initials_single.txt'
+#     filepath = os.path.join(str(Path(os.getcwd()).parent), filename)
+#     initials = open(filepath, 'w')
+#     initials.write(positions)
+#     initials.close()
+#     print("The following data has been written into initials_single.txt:")
+#     print("Motor ID: %d" % m_id, "home_offset: % 8.2f" % home_offset, "end_pos: % 8.2f" % end_pos)
+#     print("Finger calibration complete.")
 
 
 def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
@@ -301,12 +301,15 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
         print("One or more actuators offline. Exiting...")
         return
 
-    # Calibrate Palm actuator first
-    # Home INDEX finger
-    usr = input("Move all the finger to their home positions\nand put INDEX fingers in parallel, then press enter.")
-    DXL_controller.set_homing_offset(0)
-    robot.palm.home = DXL_controller.get_present_position()
-    print("Palm home set.")
+    if not bypass_DXL:
+        # Calibrate Palm actuator first
+        # Home INDEX finger
+        usr = input("Move all the finger to their home positions\nand put INDEX fingers in parallel, then press enter.")
+        DXL_controller.set_homing_offset(0)
+        robot.palm.home = DXL_controller.get_present_position()
+        print("Palm home set.")
+    else:
+        robot.palm.home = 0
 
     motor_controller.init_driver_all()
 
@@ -400,7 +403,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
     # Check if HOMING_OFFSET need to be updated
     finger_homing_error = []
     for idx, f in enumerate(robot.fingerlist):
-        present_pos = motor_controller.pbm.get_present_position(f.motor_id)[0][0]
+        present_pos = motor_controller.pbm.get_present_position(f.motor_id)[0][0][0]
         # pdb.set_trace()
         if abs(present_pos) > 0.05:
             # If the present position is away from zero for more than 0.05rad (~2.8deg)
@@ -434,7 +437,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
             # debug_temp = motor_controller.pbm.get_homing_offset(m_id, m_id, m_id)
             while not check:
                 try:
-                    if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0]) < 1:
+                    if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0][0]) < 1:
                         check = True
                         print("HOMING_OFFSET cleared for %s. Trails: %d." % (i[0].name, trial_count))
                     else:
@@ -449,7 +452,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
 
         # Get home_offset
         for i in finger_homing_error:
-            i[0].homing_offset = -(motor_controller.pbm.get_present_position(i[0].motor_id)[0][0])
+            i[0].homing_offset = -(motor_controller.pbm.get_present_position(i[0].motor_id)[0][0][0])
         # print(home_offset)
 
         # Set Homing_Offset
@@ -463,9 +466,9 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
             trial_count = 1
             while not check:
                 try:
-                    temp = motor_controller.pbm.get_homing_offset(m_id)[0][0]
+                    temp = motor_controller.pbm.get_homing_offset(m_id)[0][0][0]
                     print("Current homing_offset: % 2.2f" % temp)
-                    if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0] - homing_offset) < 0.01:
+                    if abs(motor_controller.pbm.get_homing_offset(m_id)[0][0][0] - homing_offset) < 0.01:
                         check = True
                         print("HOMING_OFFSET updated for %s. Trails: %d." % (i[0].name, trial_count))
                     else:
@@ -482,7 +485,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
         # Final check
         for i in finger_homing_error:
             m_id = i[0].motor_id
-            pos = motor_controller.pbm.get_present_position(m_id)[0][0]
+            pos = motor_controller.pbm.get_present_position(m_id)[0][0][0]
             if abs(pos) < 0.01:
                 print("%s homed." % i[0].name)
             else:
@@ -494,7 +497,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                     return
     # Update all finger.homing_offset
     for f in robot.fingerlist:
-        f.homing_offset = motor_controller.pbm.get_homing_offset(f.motor_id)[0][0]
+        f.homing_offset = motor_controller.pbm.get_homing_offset(f.motor_id)[0][0][0]
 
     if not bypass_ext_enc:
         ext_enc.connect()
@@ -510,7 +513,7 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
         usr = input("Move all the fingers to the end limit and press enter.\n")
         end_pos = motor_controller.pbm.get_present_position(INDEX.motor_id, INDEX_M.motor_id, THUMB.motor_id)
         for idx, i in enumerate(end_pos):
-            robot.fingerlist[idx].travel = i[0]
+            robot.fingerlist[idx].travel = i[0][0]
             print("end_pos recorded as:", robot.fingerlist[idx].name, robot.fingerlist[idx].travel)
 
     elif usr == "y" or usr == "Y":
@@ -546,7 +549,8 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                         if detect_count[i] > 20:
                             # TODO: check total travel value
                             print("%s end_pos reached." % robot.fingerlist[i].name)
-                            robot.fingerlist[i].travel = motor_controller.pbm.get_present_position(robot.finger_ids[i])[0][0]
+                            robot.fingerlist[i].travel = \
+                                motor_controller.pbm.get_present_position(robot.finger_ids[i])[0][0][0]
                             print("%s end_pos acquired." % robot.fingerlist[i].name)
                             end_i[i] = current[i]
                             print("%s end_i acquired." % robot.fingerlist[i].name)
@@ -605,7 +609,8 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
                 print("User interrupted.")
 
     motor_controller.torque_enable_all(0)
-    DXL_controller.torque_enable(0)
+    if not bypass_DXL:
+        DXL_controller.torque_enable(0)
 
     print("Calibration summary:")
     for f in robot.fingerlist:
@@ -645,23 +650,25 @@ def calibration_full(robot, bypass_DXL=False, bypass_ext_enc=False):
 if __name__ == '__main__':
     Robot = DAnTE
 
-    user = input("Is this a (F)ull hand calibration or a (S)ingle finger calibration?")
-    if user == 'F' or user == 'f':
-        print("Starting full hand calibration...")
-        calibration_full(Robot)
-
-    elif user == 'S' or user == 's':
-        BEAR_controller = MotorController(Robot.BEAR_baudrate, Robot.BEAR_port)
-        print("Starting single finger calibration...")
-        user = input("Which finger to calibrate? [(T)HUMB, (I)NDEX, INDEX_(M)]\n")
-        if user == 'T' or user == 't':
-            Finger = THUMB
-        elif user == 'I' or user == 'i':
-            Finger = INDEX
-        elif user == 'M' or user == 'm':
-            Finger = INDEX_M
-        else:
-            print("Invalid input. Exit.")
-            exit()
-        print("Calibrating "+Finger.name+"...")
-        calibration_single(Finger, BEAR_controller)
+    # user = input("Is this a (F)ull hand calibration or a (S)ingle finger calibration?")
+    # if user == 'F' or user == 'f':
+    #     print("Starting full hand calibration...")
+    #     calibration_full(Robot)
+    #
+    # elif user == 'S' or user == 's':
+    #     BEAR_controller = MotorController(Robot.BEAR_baudrate, Robot.BEAR_port)
+    #     print("Starting single finger calibration...")
+    #     user = input("Which finger to calibrate? [(T)HUMB, (I)NDEX, INDEX_(M)]\n")
+    #     if user == 'T' or user == 't':
+    #         Finger = THUMB
+    #     elif user == 'I' or user == 'i':
+    #         Finger = INDEX
+    #     elif user == 'M' or user == 'm':
+    #         Finger = INDEX_M
+    #     else:
+    #         print("Invalid input. Exit.")
+    #         exit()
+    #     print("Calibrating "+Finger.name+"...")
+    #     calibration_single(Finger, BEAR_controller)
+    print("Starting full hand calibration...")
+    calibration_full(Robot, bypass_DXL=True)
