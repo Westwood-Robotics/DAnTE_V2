@@ -753,7 +753,6 @@ class RobotController(object):
             iq_comp_log = []
             acceleration_log = []
 
-            sequential_loop_time = [0,0,0]
             delta_time = 0
             time.sleep(0.001)  # Delay 1ms so that we don't get a zero delta_time for the first loop.
 
@@ -770,7 +769,7 @@ class RobotController(object):
                     # Collect status and send command
                     status = self.MC.grab_loop_comm(self.robot.palm.gesture, goal_position, goal_iq)
 
-                    # sequential_loop_time[0] = time.time()-present_time # Time took to collect status and write
+                    # print(time.time()-present_time)
 
                     # Process data
                     # Motor Error
@@ -801,9 +800,6 @@ class RobotController(object):
                     # Build approach commands
                     velocity_error = [goal_approach_speed[i] - velocity[i] for i in range(finger_count)]
                     velocity_error_int = [velocity_error[i] * delta_time + velocity_error_int[i] for i in range(finger_count)]
-
-                    # Time took to process data
-                    # sequential_loop_time[1] = time.time() - present_time - sequential_loop_time[0]
 
                     # Determine if contact and Switch to torque mode and maintain detect iq upon contact
                     # Calculate goal_iq/goal_position and switch mode for contacted
@@ -841,15 +837,10 @@ class RobotController(object):
                             pass
                     # bulk_read_write at loop head.
 
-                    # Time took to calculate command
-                    # sequential_loop_time[2] = time.time()-present_time-sequential_loop_time[1]-sequential_loop_time[0]
-
                     self.robot.contact = contact_count == finger_count
 
                     # # Clamp approach_command
                     # approach_command = [max(min(i, approach_command_max), -approach_command_max) for i in approach_command]
-
-
 
                     # Data logging
                     if self.logging:
@@ -867,9 +858,9 @@ class RobotController(object):
                         self.MC.torque_enable_all(0)
                         error = 1
 
-                    # Slow it down to avoid delta_time == 0
-                    while time.time() - present_time < 0.0001:
-                        pass
+                    # # Slow it down to avoid delta_time == 0
+                    # while time.time() - present_time < 0.0001:
+                    #     pass
 
                     loop_count += 1
                     delta_time_sum += delta_time
