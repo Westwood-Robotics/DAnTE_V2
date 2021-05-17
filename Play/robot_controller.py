@@ -840,7 +840,7 @@ class RobotController(object):
                     # bulk_read_write at loop head.
 
                     # Time took to calculate command
-                    sequential_loop_time[2] = time.time() - present_time - sequential_loop_time[1]
+                    sequential_loop_time[2] = time.time()-present_time-sequential_loop_time[1]-sequential_loop_time[0]
 
                     self.robot.contact = contact_count == finger_count
 
@@ -866,7 +866,7 @@ class RobotController(object):
                         error = 1
 
                     # Slow it down to avoid delta_time == 0
-                    while time.time() - present_time < 0.0005:
+                    while time.time() - present_time < 0.0001:
                         pass
 
                 except KeyboardInterrupt:
