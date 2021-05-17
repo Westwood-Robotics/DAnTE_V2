@@ -754,6 +754,7 @@ class RobotController(object):
             acceleration_log = []
 
             sequential_loop_time = [0,0,0]
+            delta_time = 0
             time.sleep(0.001)  # Delay 1ms so that we don't get a zero delta_time for the first loop.
             while not (error or self.robot.contact):
                 # Main GRAB loop
