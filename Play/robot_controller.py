@@ -758,12 +758,12 @@ class RobotController(object):
             while not (error or self.robot.contact):
                 # Main GRAB loop
                 try:
+                    print("Loop time: %f" % delta_time)
+                    print(sequential_loop_time)
                     # Get time stamp
                     previous_time = present_time
                     present_time = time.time()
                     delta_time = present_time-previous_time
-                    print("Loop time: %f" % delta_time)
-                    print(sequential_loop_time)
 
                     # Collect status and send command
                     status = self.MC.grab_loop_comm(self.robot.palm.gesture, goal_position, goal_iq)
