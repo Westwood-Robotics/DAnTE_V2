@@ -756,11 +756,12 @@ class RobotController(object):
             sequential_loop_time = [0,0,0]
             delta_time = 0
             time.sleep(0.001)  # Delay 1ms so that we don't get a zero delta_time for the first loop.
+
+            delta_time_sum = 0
+            loop_count = 0
             while not (error or self.robot.contact):
                 # Main GRAB loop
                 try:
-                    print("Loop time: %f" % delta_time)
-                    print(sequential_loop_time)
                     # Get time stamp
                     previous_time = present_time
                     present_time = time.time()
@@ -769,7 +770,7 @@ class RobotController(object):
                     # Collect status and send command
                     status = self.MC.grab_loop_comm(self.robot.palm.gesture, goal_position, goal_iq)
 
-                    sequential_loop_time[0] = time.time()-present_time # Time took to collect status and write
+                    # sequential_loop_time[0] = time.time()-present_time # Time took to collect status and write
 
                     # Process data
                     # Motor Error
@@ -802,7 +803,7 @@ class RobotController(object):
                     velocity_error_int = [velocity_error[i] * delta_time + velocity_error_int[i] for i in range(finger_count)]
 
                     # Time took to process data
-                    sequential_loop_time[1] = time.time() - present_time - sequential_loop_time[0]
+                    # sequential_loop_time[1] = time.time() - present_time - sequential_loop_time[0]
 
                     # Determine if contact and Switch to torque mode and maintain detect iq upon contact
                     # Calculate goal_iq/goal_position and switch mode for contacted
@@ -841,7 +842,7 @@ class RobotController(object):
                     # bulk_read_write at loop head.
 
                     # Time took to calculate command
-                    sequential_loop_time[2] = time.time()-present_time-sequential_loop_time[1]-sequential_loop_time[0]
+                    # sequential_loop_time[2] = time.time()-present_time-sequential_loop_time[1]-sequential_loop_time[0]
 
                     self.robot.contact = contact_count == finger_count
 
@@ -870,12 +871,17 @@ class RobotController(object):
                     while time.time() - present_time < 0.0001:
                         pass
 
+                    loop_count += 1
+                    delta_time_sum += delta_time
+
                 except KeyboardInterrupt:
                     print("User interrupted.")
                     running = False
                     error = 2
 
             # Out of while loop -> error or contact
+            avg_loop_time = delta_time_sum/loop_count
+            print("Average loop time: %f" % avg_loop_time)
             # Data processing -logging
             if self.logging:
                 # Format all data so that it is in this formation:
@@ -903,7 +909,6 @@ class RobotController(object):
                 self.MC.torque_enable_all(0)
                 print("Grab error. System disabled.")
             else:
-
                 # # Debug option
                 # # Get current status for debug purpose.
                 # # Get mode for all
