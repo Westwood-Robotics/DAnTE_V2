@@ -769,7 +769,7 @@ class RobotController(object):
                     # Collect status and send command
                     status = self.MC.grab_loop_comm(self.robot.palm.gesture, goal_position, goal_iq)
 
-                    print(time.time()-present_time)
+                    # print(time.time()-present_time)
 
                     # Process data
                     # Motor Error
