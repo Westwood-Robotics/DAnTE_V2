@@ -769,7 +769,7 @@ class RobotController(object):
                     # Collect status and send command
                     status = self.MC.grab_loop_comm(self.robot.palm.gesture, goal_position, goal_iq)
 
-                    # print(time.time()-present_time)
+                    print(time.time()-present_time)
 
                     # Process data
                     # Motor Error
@@ -858,9 +858,9 @@ class RobotController(object):
                         self.MC.torque_enable_all(0)
                         error = 1
 
-                    # # Slow it down to avoid delta_time == 0
-                    # while time.time() - present_time < 0.0001:
-                    #     pass
+                    # Slow it down to avoid delta_time == 0
+                    while time.time() - present_time < 0.0001:
+                        pass
 
                     loop_count += 1
                     delta_time_sum += delta_time
