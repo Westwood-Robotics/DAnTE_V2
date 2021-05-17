@@ -858,10 +858,6 @@ class RobotController(object):
                         self.MC.torque_enable_all(0)
                         error = 1
 
-                    # Slow it down to avoid delta_time == 0
-                    while time.time() - present_time < 0.0001:
-                        pass
-
                     loop_count += 1
                     delta_time_sum += delta_time
 
