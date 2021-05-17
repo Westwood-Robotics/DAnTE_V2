@@ -117,7 +117,7 @@ IDLE_D = 2
 # EXTERNAL ENCODERS
 # ------------------------------
 # Existence of external encoders
-EXTERNAL_ENC = True  # Set to None if not using external encoders
+EXTERNAL_ENC = None  # Set to None if not using external encoders
 
 # We only have SPI bus 0 available to us on the Pi
 BUS = 0
@@ -160,7 +160,7 @@ SPRING_COMP_START = 0.7
 SPRING_COMP_BASE = 0.18
 SPRING_COMP_FACTOR = 0.06
 
-approach_speed_min = 0.5
+approach_speed_min = 0.3
 
 # ------------------------------
 # HOLD

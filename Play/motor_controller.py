@@ -278,18 +278,19 @@ class MotorController(object):
         command = []
         for i in range(len(goal_pos)):
             command.append([goal_pos[i], goal_iq[i]])
-
-        if gesture == 'I':
-            # Pinch mode, not using THUMB
-            info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
-                                                ['present_position', 'present_velocity', 'present_iq'],
-                                                ['goal_position', 'goal_iq'],
-                                                command)
-        else:
-            info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
-                                                ['present_position', 'present_velocity', 'present_iq'],
-                                                ['goal_position', 'goal_iq'],
-                                                command)
+        info_all = None
+        while info_all is None:
+            if gesture == 'I':
+                # Pinch mode, not using THUMB
+                info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
+                                                    ['present_position', 'present_velocity', 'present_iq'],
+                                                    ['goal_position', 'goal_iq'],
+                                                    command)
+            else:
+                info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                                                    ['present_position', 'present_velocity', 'present_iq'],
+                                                    ['goal_position', 'goal_iq'],
+                                                    command)
         return info_all
 
     def get_present_status_index(self):

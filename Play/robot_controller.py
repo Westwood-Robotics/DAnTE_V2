@@ -598,7 +598,7 @@ class RobotController(object):
         :param float d_gain: BEAR d_gain
         :return:
         """
-
+        print("Setting stiffness")
         # Set D gain first
         for i in range(finger_count):
             self.MC.pbm.set_d_gain_force((self.robot.finger_ids[i], d_gain))
@@ -606,7 +606,7 @@ class RobotController(object):
         check = 0
         while check < finger_count:
             for i in range(finger_count):
-                if round(self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0][0], 2) != d_gain:
+                if round(self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0][0], 2) != round(d_gain, 2):
                     self.MC.pbm.set_d_gain_force((self.robot.finger_ids[i], d_gain))
                 else:
                     check += 1
@@ -617,7 +617,7 @@ class RobotController(object):
         check = 0
         while check < finger_count:
             for i in range(finger_count):
-                if round(self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0][0], 2) != p_gain:
+                if round(self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0][0], 2) != round(p_gain, 2):
                     self.MC.pbm.set_p_gain_force((self.robot.finger_ids[i], p_gain))
                 else:
                     check += 1
@@ -733,7 +733,6 @@ class RobotController(object):
             present_time = start_time
 
             # Initialize status variables
-            finger_count = 0
             velocity = [0, 0, 0]
             prev_velocity = [0, 0, 0]
             velocity_error = [0, 0, 0]
@@ -755,14 +754,16 @@ class RobotController(object):
             acceleration_log = []
 
             sequential_loop_time = [0,0,0]
-
+            time.sleep(0.001)  # Delay 1ms so that we don't get a zero delta_time for the first loop.
             while not (error or self.robot.contact):
                 # Main GRAB loop
                 try:
                     # Get time stamp
                     previous_time = present_time
                     present_time = time.time()
-                    delta_time = present_time - previous_time
+                    delta_time = present_time-previous_time
+                    print("Loop time: %f" % delta_time)
+                    print(sequential_loop_time)
 
                     # Collect status and send command
                     status = self.MC.grab_loop_comm(self.robot.palm.gesture, goal_position, goal_iq)
@@ -780,6 +781,7 @@ class RobotController(object):
                     prev_velocity = velocity
                     velocity = [SMOOTHING * status[i][0][1] + (1 - SMOOTHING) * velocity[i] for i in
                                 range(finger_count)]
+
                     # Acceleration
                     acceleration = [
                         SMOOTHING * (velocity[i] - prev_velocity[i]) / delta_time + (1 - SMOOTHING) * acceleration[i]
@@ -829,7 +831,8 @@ class RobotController(object):
                                     contact_count += 1
                             else:
                                 # Build command
-                                approach_command[idx] = position[idx] + approach_p * velocity_error[idx] + approach_i * velocity_error_int[idx] - approach_d * acceleration[idx]
+                                goal_position[idx] = position[idx] + approach_p * velocity_error[idx] + approach_i * \
+                                                     velocity_error_int[idx] - approach_d * acceleration[idx]
                         else:
                             # This finger has contacted
                             # Keep sending iq command
@@ -844,8 +847,7 @@ class RobotController(object):
                     # # Clamp approach_command
                     # approach_command = [max(min(i, approach_command_max), -approach_command_max) for i in approach_command]
 
-                    print("Loop time: %f" % delta_time)
-                    print(sequential_loop_time)
+
 
                     # Data logging
                     if self.logging:
@@ -862,6 +864,11 @@ class RobotController(object):
                         print("Grab motion timeout")
                         self.MC.torque_enable_all(0)
                         error = 1
+
+                    # Slow it down to avoid delta_time == 0
+                    while time.time() - present_time < 0.0005:
+                        pass
+
                 except KeyboardInterrupt:
                     print("User interrupted.")
                     running = False
