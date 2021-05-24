@@ -20,7 +20,7 @@ Script that holds macros for robot tuning.
 # GRAB Function
 # ------------------------------
 
-TIMEOUT_GRAB = 3
+TIMEOUT_GRAB = 5
 
 # detect_current smaller than detect_current_min will generate too much false detection thus not recommended.
 # When using a detect_current smaller than confident_detect_current_min, detection must be confirmed for multiple times
@@ -31,7 +31,7 @@ detect_confirm = 2  # Times a detect must be confirmed before triggering
 
 
 approach_stiffness_min = 0.2
-approach_p = 0.15
+approach_p = 0.3  #0.15
 approach_d = 0  # Acceleration is too noisy, DO NOT USE
 
 
@@ -51,14 +51,25 @@ def approach_i_func(x):
         return 0.119*x**3 - 1.083*x**2 + 3.417*x + 1.048
 
 
-approach_command_max = 3
+def approach_stiffness_func(speed, stiffness):
+    # Function to determine approach stiffness
+    # Stiffness can not be too small when speed is small
+    return max(stiffness, 0.9/speed)
+
 
 default_approach_speed = 1
 default_approach_stiffness = 1
+force_d_min = 0.05  # Minimum d gain for force mode to avoid oscillation
+force_d_max = 1.5  # Maximum d gain for force mode to avoid noisy iq
 default_detect_current = 0.42
-default_final_stiffness = 1
 default_preload = 0.5
 default_max_iq = 1.5
+
+# ------------------------------
+# Grab End
+# ------------------------------
+preload_p = 5
+preload_i = 25
 
 # ------------------------------
 # HOLD

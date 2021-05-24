@@ -96,7 +96,7 @@ IQID_D = 0
 
 POS_P = 5
 POS_I = 0.005
-POS_D = 1.5
+POS_D = 0
 
 VEL_P = 0.4
 VEL_I = 0.005
@@ -153,6 +153,8 @@ TIMEOUT_INIT = 5
 # ------------------------------
 MA_window = 15  # Window for simple moving average
 SMOOTHING = 0.07  # Smoothing factor for exponential moving average
+SMOOTHING_IQ = 0.2  # Smoothing factor for exponential moving average on iq
+SMOOTHING_VEL = 0.4  # Smoothing factor for exponential moving average on velocity
 
 ACC_COMP_FACTOR = 0.006
 
@@ -165,8 +167,9 @@ approach_speed_min = 0.3
 # ------------------------------
 # HOLD
 # ------------------------------
-HOLD_P_FACTOR = 1.5
-HOLD_D_FACTOR = 1
+HOLD_P_FACTOR = 0.5
+HOLD_D_FACTOR = 2
+HOLD_D_MAX = 3
 
 # ------------------------------
 # GRIP

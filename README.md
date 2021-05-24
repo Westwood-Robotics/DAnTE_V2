@@ -1,7 +1,7 @@
 # DAnTE_V2
 Controller software for Westwood Robotics DAnTE V2
 
-Firmware version 0.1.0
+Firmware version 0.1.1
 
 ## Hardware
 #### 1. DAnTE_V2
@@ -24,7 +24,7 @@ DAnTE is controlled by a Raspberry Pi 4 by default, but it can also be paired wi
 
 Please use PyBEAR from Westwood Robotics [PyBEAR-WR](https://github.com/Westwood-Robotics/PyBEAR-WR).
 
-Must use PyBEAR 0.0.3 or higher.
+Must use PyBEAR 0.1.1 or higher.
 
 Due to the differences in data return format, the current RoMeLa PyBEAR will **NOT** work with DAnTE V2.
 

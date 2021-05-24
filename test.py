@@ -14,7 +14,8 @@ rc.start_robot()
 rc.initialization()
 
 input("Press Enter to continue....")
-rc.grab('Y', 'G', approach_speed=0.3, approach_stiffness=3, detect_current=0.5, final_stiffness=0.5, preload=0.2)
+rc.grab('P', 'H', approach_speed=2, approach_stiffness=0.2, final_stiffness=5, max_iq=10, preload=0.25)
+
 input("Press Enter to release...")
 rc.release('F')
 rc.set_robot_enable(0)
