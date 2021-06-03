@@ -169,7 +169,7 @@ approach_speed_min = 0.3
 # ------------------------------
 HOLD_P_FACTOR = 0.5
 HOLD_D_FACTOR = 2
-HOLD_D_MAX = 3
+HOLD_D_MAX = 8
 
 # ------------------------------
 # GRIP

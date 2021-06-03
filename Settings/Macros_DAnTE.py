@@ -29,26 +29,29 @@ detect_current_min = 0.35
 confident_detect_current = 0.4
 detect_confirm = 2  # Times a detect must be confirmed before triggering
 
-
+approach_i_limit = 1  # Limit I when approaching with velocity mode
 approach_stiffness_min = 0.2
-approach_p = 0.3  #0.15
 approach_d = 0  # Acceleration is too noisy, DO NOT USE
 
+def approach_p_func(x):
+    # approach p is a function of approach_stiffness
+    # When approach stiffness is above 0.5, approach_p = 0.8
+    # When approach stiffness is below 0.5, approach_p = 0.4/stiffness
+    # Above is experiment result.
+    if x < 0.5:
+        return 0.4/x
+    else:
+        return 0.8
 
 def approach_i_func(x):
     # approach i is a function of approach_stiffness
-    # When approach stiffness is below 0.5, approach_i = 2.5
-    # When approach stiffness is above 4.0, approach_i = 5
-    # When in between, approach i is a function
-    #        3         2
-    # 0.119 x - 1.083 x + 3.417 x + 1.048
+    # When approach stiffness is above 0.5, approach_i = 5
+    # When approach stiffness is below 0.5, approach_i = 2.5/stiffness
     # Above is experiment result.
     if x < 0.5:
-        return 2.5
-    elif x > 4.0:
-        return 5
+        return 2.5/x
     else:
-        return 0.119*x**3 - 1.083*x**2 + 3.417*x + 1.048
+        return 5
 
 
 def approach_stiffness_func(speed, stiffness):
@@ -63,13 +66,7 @@ force_d_min = 0.05  # Minimum d gain for force mode to avoid oscillation
 force_d_max = 1.5  # Maximum d gain for force mode to avoid noisy iq
 default_detect_current = 0.42
 default_preload = 0.5
-default_max_iq = 1.5
-
-# ------------------------------
-# Grab End
-# ------------------------------
-preload_p = 5
-preload_i = 25
+default_max_iq = 3
 
 # ------------------------------
 # HOLD
