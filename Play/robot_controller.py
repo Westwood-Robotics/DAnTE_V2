@@ -14,9 +14,6 @@ from Play.motor_controller import MotorController
 from Play.dynamixel_controller import DynamixelController
 from Settings.Robot import *
 from Settings.Constants_DAnTE import *
-import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.interactive(True)
 import math
 from collections import deque
 
@@ -26,6 +23,16 @@ if EXTERNAL_ENC:
     from Play.MPS import MPS_Encoder_Cluster
 
 import pdb
+
+with open('/sys/firmware/devicetree/base/model', 'r') as sysinfo:
+    if 'raspberry pi zero' in sysinfo.read().lower():
+        print("Using Pi-ZERO, will not plot.")
+        PLOTTING_OVERRIDE = False
+    else:
+        import matplotlib.pyplot as plt
+        import matplotlib
+        matplotlib.interactive(True)
+        PLOTTING_OVERRIDE = True
 
 class RobotController(object):
 
@@ -774,7 +781,7 @@ class RobotController(object):
             for data in finger_iq:
                 avrg_iq.append(sum(data) / len(data))
 
-            if plot:
+            if plot and PLOTTING_OVERRIDE:
                 plt.figure(1)
                 plt.subplot(311)
                 plt.plot(t, finger_iq_filtered[0], 'g', t, finger_iq[0], 'c', t, avrg_iq[0] * 701, 'k')
@@ -959,7 +966,7 @@ class RobotController(object):
             self.final_stiffness = options.get("final_stiffness", self.approach_stiffness)
             self.preload = options.get("preload", default_preload)
             self.max_iq = max(options.get("max_iq", default_max_iq), 2*self.preload)
-            logging = options.get("logging", False)
+            logging = options.get("logging", False) and PLOTTING_OVERRIDE
 
             # update approach stiffness
             self.approach_stiffness = approach_stiffness_func(self.approach_speed, self.approach_stiffness)
