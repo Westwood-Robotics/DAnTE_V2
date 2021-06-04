@@ -741,7 +741,7 @@ class RobotController(object):
             finger_velocity = [[], [], []]
             finger_iq = [[], [], []]
             start_time = time.time()
-            for i in range(100, 800):
+            for i in range(100, 700):
                 data.clear()
                 data = self.MC.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
                                                    ['present_position', 'present_velocity', 'present_iq'],
@@ -769,7 +769,7 @@ class RobotController(object):
             self.release('F')
             self.set_robot_enable(0)
 
-            finger_iq_filtered = [[0] * 701, [0] * 701, [0] * 701]
+            finger_iq_filtered = [[0] * 601, [0] * 601, [0] * 601]
             for i in range(len(finger_velocity[0])):
                 for j in range(3):
                     if i == 0:
@@ -784,13 +784,13 @@ class RobotController(object):
             if plot and PLOTTING_OVERRIDE:
                 plt.figure(1)
                 plt.subplot(311)
-                plt.plot(t, finger_iq_filtered[0], 'g', t, finger_iq[0], 'c', t, avrg_iq[0] * 701, 'k')
+                plt.plot(t, finger_iq_filtered[0], 'g', t, finger_iq[0], 'c', t, avrg_iq[0] * 601, 'k')
                 plt.grid(True)
                 plt.subplot(312)
-                plt.plot(t, finger_iq_filtered[1], 'g', t, finger_iq[1], 'c', t, avrg_iq[1] * 701, 'k')
+                plt.plot(t, finger_iq_filtered[1], 'g', t, finger_iq[1], 'c', t, avrg_iq[1] * 601, 'k')
                 plt.grid(True)
                 plt.subplot(313)
-                plt.plot(t, finger_iq_filtered[2], 'g', t, finger_iq[2], 'c', t, avrg_iq[2] * 701, 'k')
+                plt.plot(t, finger_iq_filtered[2], 'g', t, finger_iq[2], 'c', t, avrg_iq[2] * 601, 'k')
                 plt.grid(True)
                 plt.show()
 
