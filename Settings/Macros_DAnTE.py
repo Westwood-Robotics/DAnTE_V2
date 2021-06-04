@@ -62,6 +62,7 @@ def approach_stiffness_func(speed, stiffness):
 
 default_approach_speed = 1
 default_approach_stiffness = 1
+default_final_stiffness = 1
 force_d_min = 0.05  # Minimum d gain for force mode to avoid oscillation
 force_d_max = 1.5  # Maximum d gain for force mode to avoid noisy iq
 default_detect_current = 0.42

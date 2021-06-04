@@ -289,12 +289,12 @@ class MotorController(object):
                 # Pinch mode, not using THUMB
                 info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
                                                     ['present_position', 'present_velocity', 'present_iq'],
-                                                    ['goal_position', 'goal_vel', 'goal_iq'],
+                                                    ['goal_position', 'goal_velocity', 'goal_iq'],
                                                     command, error_mode=1)
             else:
                 info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
                                                     ['present_position', 'present_velocity', 'present_iq'],
-                                                    ['goal_position', 'goal_vel', 'goal_iq'],
+                                                    ['goal_position', 'goal_velocity', 'goal_iq'],
                                                     command, error_mode=1)
         return info_all
 
@@ -315,10 +315,10 @@ class MotorController(object):
 
         if gesture == 'I':
             # Pinch mode, not using THUMB
-            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M], ['goal_position', 'goal_vel', 'goal_iq'], command)
+            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M], ['goal_position', 'goal_velocity', 'goal_iq'], command)
         else:
             self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
-                                ['goal_position', 'goal_vel', 'goal_iq'], command)
+                                ['goal_position', 'goal_velocity', 'goal_iq'], command)
 
     def grab_loop_comm_velocity(self, gesture, goal_velocity):
         """

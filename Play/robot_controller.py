@@ -24,15 +24,15 @@ if EXTERNAL_ENC:
 
 import pdb
 
-with open('/sys/firmware/devicetree/base/model', 'r') as sysinfo:
-    if 'raspberry pi zero' in sysinfo.read().lower():
-        print("Using Pi-ZERO, will not plot.")
-        PLOTTING_OVERRIDE = False
-    else:
-        import matplotlib.pyplot as plt
-        import matplotlib
-        matplotlib.interactive(True)
-        PLOTTING_OVERRIDE = True
+# PI0 is in Settings.Robot
+if PI0:
+    print("Using Pi-ZERO, will not plot.")
+    PLOTTING_OVERRIDE = False
+else:
+    import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.interactive(True)
+    PLOTTING_OVERRIDE = True
 
 class RobotController(object):
 
@@ -66,10 +66,10 @@ class RobotController(object):
         # self.gesture = None
         self.mode = None
 
-        self.approach_speed = None
+        self.approach_speed = default_approach_speed
         self.approach_stiffness = None
         self.detect_current = None
-        self.final_stiffness = None
+        self.final_stiffness = default_final_stiffness
         self.preload = None
         self.max_iq = None
         self.contact_position = [0, 0, 0]
@@ -917,7 +917,7 @@ class RobotController(object):
             self.robot.palm.gesture = new_gesture
             return True
 
-    def grab(self, gesture, mode, **options):
+    def grab_old(self, gesture, mode, **options):
         # Trying a new method of contact detection based on possibility calcultated from velocity and iq
         """
         Control grab motion of self.robot
@@ -1221,7 +1221,7 @@ class RobotController(object):
                 # Run grab_end motion
                 self.grab_end(logging=logging)
 
-    def grab_simplified(self, gesture, mode, **options):
+    def grab(self, gesture, mode, **options):
         # Trying a new method of contact detection based on possibility calcultated from velocity and iq
         # Trying a simplified method of just using velocity mode to approach
         """
@@ -1232,7 +1232,6 @@ class RobotController(object):
         :param str mode: Specify a grab mode: (H)old or (G)rip
 
         :keyword float approach_speed: Approach speed
-        :keyword float approach_stiffness: Approach stiffness
         :keyword float final_stiffness: Grip/Hold stiffness
         :keyword float preload: Grip/Hold reload, preload in Amps.
         :keyword float max_iq: Maximum torque current
@@ -1266,22 +1265,12 @@ class RobotController(object):
             self.mode = mode
             # Options:
             self.approach_speed = max(options.get("approach_speed", default_approach_speed), approach_speed_min)
-            self.approach_stiffness = max(options.get("approach_stiffness", default_approach_stiffness),
-                                          approach_stiffness_min)
-            self.final_stiffness = options.get("final_stiffness", self.approach_stiffness)
+            self.final_stiffness = options.get("final_stiffness", default_final_stiffness)
             self.preload = options.get("preload", default_preload)
             self.max_iq = max(options.get("max_iq", default_max_iq), 2*self.preload)
             logging = options.get("logging", False)
 
-            # update approach stiffness
-            self.approach_stiffness = approach_stiffness_func(self.approach_speed, self.approach_stiffness)
-
-        # Calculate approach P and I gains from approach_stiffness
-        approach_p = approach_p_func(self.approach_stiffness)
-        approach_i = approach_i_func(self.approach_stiffness)
-
         contact_count = 0
-
         # Calculate goal_approach_speed
         goal_approach_speed = [-self.approach_speed + 2 * self.approach_speed * f.mirrored for f in
                                self.robot.fingerlist]
@@ -1290,18 +1279,9 @@ class RobotController(object):
 
         # Start with change into gesture
         self.change_gesture(gesture)
-        # Set fingers' Direct Force PID according to Stiffness
-        # self.set_approach_stiffness()
-        force_p = self.approach_stiffness
-        force_d = min(max(0.1 * force_p, force_d_min), force_d_max)
-        finger_count = self.get_finger_count()
-        self.set_stiffness(finger_count, force_p, force_d)
 
         # Set into Velocity Mode
         self.MC.set_mode_all('velocity')
-        # TODO: get back to DF Mode
-        # # Set into Direct Force Mode
-        # self.MC.set_mode_all('force')
 
         # Set i_max and velocity_max
         for f_id in self.robot.finger_ids:
@@ -1331,12 +1311,8 @@ class RobotController(object):
 
             # Initialize status variables
             velocity = [0, 0, 0]
-            prev_velocity = [0, 0, 0]
-            velocity_error = [0, 0, 0]
-            velocity_error_int = [0, 0, 0]
             iq = [0, 0, 0]
             goal_iq = [0, 0, 0]
-            position = [0, 0, 0]
             goal_position = self.MC.get_present_position_all()  # populate with present pos
             possibility = [0, 0, 0]
             possibility_int = [0, 0, 0]  # integration of relatively low possibility
@@ -1352,11 +1328,9 @@ class RobotController(object):
             # Status logging
             velocity_log = []
             position_log = []
-            goal_position_log = []
             time_log = []
             delta_time_log = []
             iq_log = []
-            iq_comp_log = []
             possibility_log = []
             vel_raw_log = []
             iq_raw_log = []
@@ -1381,10 +1355,7 @@ class RobotController(object):
                     status = self.MC.grab_loop_comm_all(self.robot.palm.gesture,
                                                         goal_position, goal_approach_speed, goal_iq)
 
-                    # print(time.time()-present_time)
-
                     # Process data
-                    # print(status)
                     # Motor Error
                     motor_err = [i[1] for i in status]
                     # Position
@@ -1396,21 +1367,13 @@ class RobotController(object):
                         iq_window[idx].append(iq[idx])
                         iq_window[idx].popleft()
                     # Velocity
-                    prev_velocity = velocity
                     velocity = [SMOOTHING_VEL * status[i][0][1] + (1 - SMOOTHING_VEL) * velocity[i] for i in
                                 range(finger_count)]
                     vel_raw = [status[i][0][1] for i in range(finger_count)]
 
                     # Approach motion
-                    # Calculate approach_command
-                    # RobotController PID generating position command so that finger tracks approach_speed
-                    # Build approach commands
-                    velocity_error = [goal_approach_speed[i] - velocity[i] for i in range(finger_count)]
-                    velocity_error_int = [velocity_error[i] * delta_time + velocity_error_int[i]
-                                          for i in range(finger_count)]
 
-                    # Determine if contact and switch to force mode and maintain contact position, 0 velocity and
-                    # preload
+                    # Determine if contact and switch to force mode and maintain contact position, 0-velocity, preload
                     # Just send all goal commands, let BEAR choose which to use.
                     for idx in range(finger_count):
                         if not self.robot.fingerlist[idx].contact:
@@ -1423,13 +1386,15 @@ class RobotController(object):
                                 possibility_int[idx] += possibility[idx]
                             if possibility[idx] > criteria[1] or possibility_int[idx] > criteria[2]:
                                 # This finger has come to contact
-                                # Switch to DF mode and maintain contact position, 0 velocity and preload
+                                # Switch to force mode and maintain contact position, 0 velocity and preload
                                 self.robot.fingerlist[idx].contact = True
                                 print('Finger contact:', self.robot.fingerlist[idx].name, 'Position:', position[idx])
                                 self.contact_position[idx] = position[idx]
                                 goal_position[idx] = self.contact_position[idx]
                                 goal_iq[idx] = self.robot.iq_compensation[idx]+goal_preload[idx]
+                                goal_approach_speed[idx] = 0
                                 self.MC.set_mode(self.robot.fingerlist[idx].motor_id, 'force')
+                                self.MC.pbm.set_limit_i_max((self.robot.fingerlist[idx].motor_id, goal_iq[idx]+0.5))
                                 contact_count += 1
                     # bulk_read_write at loop head.
                     self.robot.contact = contact_count == finger_count
@@ -1440,7 +1405,6 @@ class RobotController(object):
                         time_log.append(grab_time)
                         velocity_log.append(velocity[:])
                         position_log.append(position[:])
-                        goal_position_log.append(goal_position[:])
                         iq_log.append(iq[:])
                         possibility_log.append(possibility[:])
                         vel_raw_log.append(vel_raw[:])
@@ -1467,6 +1431,7 @@ class RobotController(object):
 
             avg_loop_time = delta_time_sum / loop_count
             print("Average loop time: %f" % avg_loop_time)
+            print("goal_position: ", goal_position, "goal_iq: ", goal_iq, "goal_speed: ", goal_approach_speed)
 
             # Data processing -logging
             if logging:
@@ -1474,7 +1439,6 @@ class RobotController(object):
                 # data_log_all = [[INDEX data], [INDEX_M data], [THUMB data]]
                 velocity_log_all = []
                 position_log_all = []
-                goal_position_log_all = []
                 iq_log_all = []
                 iq_raw_log_all = []
                 vel_raw_log_all = []
@@ -1485,7 +1449,6 @@ class RobotController(object):
                     velocity_log_all.append([data[i] for data in velocity_log])
                     vel_raw_log_all.append([data[i] for data in vel_raw_log])
                     position_log_all.append([data[i] for data in position_log])
-                    goal_position_log_all.append([data[i] for data in goal_position_log])
                     iq_log_all.append([data[i] for data in iq_log])
                     iq_raw_log_all.append([data[i] for data in iq_raw_log])
                     possibility_log_all.append([data[i] for data in possibility_log])
@@ -1495,26 +1458,22 @@ class RobotController(object):
                 plt.figure(1)
                 plt.subplot(311)
                 plt.plot(time_log, position_log_all[0], 'b',
-                         time_log, goal_position_log_all[0], 'c',
                          time_log, velocity_log_all[0], 'r',
                          time_log, contact_log_all[0], 'k')
                 plt.grid(True)
 
                 plt.subplot(312)
                 plt.plot(time_log, position_log_all[1], 'b',
-                         time_log, goal_position_log_all[1], 'c',
                          time_log, velocity_log_all[1], 'r',
                          time_log, contact_log_all[1], 'k')
                 plt.grid(True)
 
                 plt.subplot(313)
                 plt.plot(time_log, position_log_all[2], 'b',
-                         time_log, goal_position_log_all[1], 'c',
                          time_log, velocity_log_all[2], 'r',
                          time_log, contact_log_all[2], 'k')
                 plt.grid(True)
                 plt.show()
-            pdb.set_trace()
             if error:
                 self.MC.torque_enable_all(0)
                 print("Grab error. System disabled.")
@@ -1523,10 +1482,9 @@ class RobotController(object):
                 # # Get contact iq for all fingers
                 # self.contact_iq = [sum(data) / 20 for data in iq_window]
                 # Run grab_end motion
-                self.grab_end(logging=logging)
+                self.grab_end()
 
-
-    def grab_end(self, logging=False):
+    def grab_end_old(self, logging=False):
         # Grab function ends up into this function
         # All BEARs take position command so that the present_iq reaches preload_iq+iq_compensation
         # In Parallel mode, THUMB takes 2*preload to balance load on object
@@ -1729,12 +1687,53 @@ class RobotController(object):
             goal_position = [sum(i) / len(i) for i in goal_position_window]
             self.MC.set_goal_position(self.robot.palm.gesture, goal_position)
 
-    def release(self, release_mode, *hold_stiffness):
+    def grab_end(self):
+        # Grab function ends up into this function
+        # Work with simplified grab, the purpose of this function is to just change gains
+        # and adjust THUM preload if needed
+        # In Parallel mode, THUMB takes 2*preload to balance load on object
+        # Hold mode is different from Grip mode such that Hold mode is damping heavy
+
+        error = 0
+        finger_count = self.get_finger_count()
+        # Check mode:
+        if self.mode == 'H':
+            # Hold mode, change to big D with small P
+            # Calculate HOLD gains according to final_stiffness
+            p_gain = round(HOLD_P_FACTOR * self.final_stiffness, 2)
+            d_gain = min(round(HOLD_D_FACTOR * self.final_stiffness, 2), HOLD_D_MAX)
+            print("Hold mode - p_gain: %2.2f, d_gain: %2.2f" % (p_gain, d_gain))
+        else:
+            # Grip mode
+            # Calculate GRIP gains according to final_stiffness
+            p_gain = round(GRIP_P_FACTOR * self.final_stiffness, 2)
+            d_gain = round(GRIP_D_FACTOR * self.final_stiffness, 2)
+            print("Grip mode - p_gain: %2.2f, d_gain: %2.2f" % (p_gain, d_gain))
+
+        self.set_stiffness(finger_count, p_gain, d_gain)
+
+        # Calculate preload iq to track
+        signed_balance_factor = [(self.robot.fingerlist[idx].mirrored
+                                  - (not self.robot.fingerlist[idx].mirrored)) * self.balance_factor[idx]
+                                 for idx in range(finger_count)]
+
+        goal_iq = [[self.preload * signed_balance_factor[idx]
+                   + self.robot.iq_compensation[idx]] for idx in range(finger_count)]
+
+        if self.robot.palm.gesture == 'I':
+            # Pinch mode, not using THUMB
+            self.MC.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M], ['goal_iq'], goal_iq)
+        else:
+            self.MC.pbm.bulk_write(self.robot.finger_ids, ['goal_iq'], goal_iq)
+
+    def release(self, release_mode=None, **options):
         """
-        Release motion, all fingers run in position mode
+        Release motion, all fingers run in position mode when using Let-go and Full-release mode
 
         :param str release_mode: change-to-(H)old, (L)et-go, (F)ul-release
-        :param float hold_stiffness: hold stiffness, only work for change to hold. (See Macros_DAnTE for default)
+
+        :keyword float hold_stiffness: hold stiffness, only work for change to hold. (See Macros_DAnTE for default)
+        :keyword float hold_preload: new preload in change-to-(H)old mode, if any.
         """
 
         # TODO: if original stiffness is too low, it might not trigger full release end sign, thus use separate
@@ -1746,6 +1745,8 @@ class RobotController(object):
             print("Robot not initialized. Exit.")
             return error
 
+        if release_mode is None:
+            release_mode = 'F'
         # Check input
         if release_mode not in ['H', 'L', 'F']:
             print("Invalid mode.")  # TODO: Throw an exception
@@ -1773,67 +1774,39 @@ class RobotController(object):
         if release_mode == 'H':
             # Hold mode, change to big D with small P
             # Do not release contact
-            # Enforced writing
-            if len(hold_stiffness) == 0:
-                # No hold_stiffness provided, go with default
-                hold_stiffness = default_hold_stiffness
+            hold_stiffness = options.get("hold_stiffness", self.final_stiffness)
             # Calculate HOLD_D according to hold_stiffness
-            hold_p = HOLD_P_FACTOR * hold_stiffness
-            hold_d = HOLD_D_FACTOR * hold_stiffness
+            p_gain = round(HOLD_P_FACTOR * hold_stiffness, 2)
+            d_gain = min(round(HOLD_D_FACTOR * hold_stiffness, 2), HOLD_D_MAX)
             if self.robot.palm.gesture == 'I':
                 # Pinch mode, use only index fingers
                 finger_count = 2
             else:
                 # Use all three fingers
                 finger_count = 3
+            self.set_stiffness(finger_count, p_gain, d_gain)
+            # Check if there is a new preload
+            hold_preload = options.get("hold_preload")
+            if hold_preload is not None:
+                # Calculate preload iq to track
+                signed_balance_factor = [(self.robot.fingerlist[idx].mirrored
+                                          - (not self.robot.fingerlist[idx].mirrored)) * self.balance_factor[idx]
+                                         for idx in range(finger_count)]
 
-            # Set D gain first
-            for i in range(finger_count):
-                self.MC.pbm.set_d_gain_force((self.robot.finger_ids[i], hold_d))
-            # Enforce writing
-            check = 0
-            while check < finger_count:
-                for i in range(finger_count):
-                    if round(self.MC.pbm.get_d_gain_force(self.robot.finger_ids[i])[0][0][0], 2) != hold_d:
-                        self.MC.pbm.set_d_gain_force((self.robot.finger_ids[i], hold_d))
-                    else:
-                        check += 1
-            # Then set P gain
-            for i in range(finger_count):
-                self.MC.pbm.set_p_gain_force((self.robot.finger_ids[i], hold_p))
-            # Enforce writing
-            check = 0
-            while check < finger_count:
-                for i in range(finger_count):
-                    if round(self.MC.pbm.get_p_gain_force(self.robot.finger_ids[i])[0][0][0], 2) != hold_p:
-                        self.MC.pbm.set_p_gain_force((self.robot.finger_ids[i], hold_p))
-                    else:
-                        check += 1
-            # Move goal_position forward for a bit more grabbing
-            # Calculate goal_position
-            goal_position = [
-                round(self.contact_position[i] +
-                      (self.robot.fingerlist[i].mirrored - (not self.robot.fingerlist[i].mirrored)) * delta_position, 4)
-                for i in range(finger_count)]
+                goal_iq = [[hold_preload * signed_balance_factor[idx]
+                            + self.robot.iq_compensation[idx]] for idx in range(finger_count)]
+                for idx in range(finger_count):
+                    self.MC.pbm.set_limit_i_max((self.robot.fingerlist[idx].motor_id, goal_iq[idx][0] + 0.5))
 
-            # Send command
-            for i in range(finger_count):
-                self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
-            # Enforce writing
-            check = 0
-            while check < finger_count:
-                for i in range(finger_count):
-                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0][0], 4) != goal_position[i]:
-                        self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
-                    else:
-                        check += 1
-            # Switch into Direct Force mode
-            for i in range(finger_count):
-                self.MC.set_mode(self.robot.finger_ids[i], 'force')
+                if self.robot.palm.gesture == 'I':
+                    # Pinch mode, not using THUMB
+                    self.MC.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M], ['goal_iq'], goal_iq)
+                else:
+                    self.MC.pbm.bulk_write(self.robot.finger_ids, ['goal_iq'], goal_iq)
 
         else:
             # Let-go or Full-release
-            # Uses existing mode and gains
+            # Use position mode
             # Reset contact
             for f in self.robot.fingerlist:
                 f.contact = False
@@ -1857,13 +1830,15 @@ class RobotController(object):
                 goal_position = [0, 0, 0]
 
             # Send command
+            self.MC.set_mode_all('position')
+
             for i in range(finger_count):
                 self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
             # Enforce writing
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0][0], 4) != goal_position[i]:
+                    if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0][0], 2) != round(goal_position[i], 2):
                         self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
                     else:
                         check += 1
@@ -1872,7 +1847,7 @@ class RobotController(object):
             check = 0
             while check < finger_count:
                 for i in range(finger_count):
-                    if abs(self.MC.pbm.get_present_position(self.robot.finger_ids[i])[0][0][0]-goal_position[i]) < 0.3:
+                    if abs(self.MC.pbm.get_present_position(self.robot.finger_ids[i])[0][0][0]-goal_position[i]) < 0.15:
                         # This finger has come close enough to release point
                         check += 1
             print("Released.")

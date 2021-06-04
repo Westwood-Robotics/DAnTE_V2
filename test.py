@@ -11,12 +11,16 @@ from Play.robot_controller import RobotController
 rc = RobotController()
 rc.start_robot()
 rc.initialization()
-
-input("Press Enter to grab...")
-rc.grab('P', 'G')
-rc.grab('P', 'G', approach_speed=0.5, preload=0.2)
+# Business Card Wide
+rc.grab('I', 'G', approach_speed=3, preload=0.2, final_stiffness=1)
+# Business Card Narrow
+rc.grab('I', 'G', approach_speed=5, preload=0.2, final_stiffness=1)
+# Folded Sticky Note or paper
+rc.grab('P', 'G', approach_speed=5, preload=0.1, final_stiffness=0.5)
 
 input("Press Enter to release...")
 rc.release('F')
-
 rc.set_robot_enable(0)
+
+
+

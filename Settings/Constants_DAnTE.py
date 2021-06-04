@@ -103,7 +103,7 @@ VEL_I = 0.005
 VEL_D = 0.0
 
 FOR_P = 1.5
-FOR_I = 0.0
+FOR_I = 0.1
 FOR_D = 0.15
 
 # IDLE
@@ -169,7 +169,7 @@ approach_speed_min = 0.3
 # ------------------------------
 HOLD_P_FACTOR = 0.5
 HOLD_D_FACTOR = 2
-HOLD_D_MAX = 8
+HOLD_D_MAX = 5
 
 # ------------------------------
 # GRIP
