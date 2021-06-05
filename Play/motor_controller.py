@@ -309,7 +309,6 @@ class MotorController(object):
         :param list goal_iq: The goal iq command to send
         """
         goals = None
-        rtn = None
         if gesture == 'I':
             checksum = round(sum(goal_pos[:2]+goal_vel[:2]+goal_iq[:2]), 5)
         else:
@@ -318,6 +317,7 @@ class MotorController(object):
         for i in range(len(goal_pos)):
             command.append([goal_pos[i], goal_vel[i], goal_iq[i]])
         while goals != checksum:
+            rtn = None
             while rtn is None:
                 if gesture == 'I':
                     # Pinch mode, not using THUMB
