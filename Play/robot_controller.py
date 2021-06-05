@@ -1428,7 +1428,8 @@ class RobotController(object):
 
             # Out of while loop -> error or contact
             # Confirm goals are written correctly
-            self.MC.grab_loop_confirm_goals(self.robot.palm.gesture, goal_position, goal_approach_speed, goal_iq)
+            # self.MC.grab_loop_confirm_goals(self.robot.palm.gesture, goal_position, goal_approach_speed, goal_iq)
+            self.MC.set_bulk_goals(self.robot.palm.gesture, goal_position, goal_approach_speed, goal_iq)
 
             avg_loop_time = delta_time_sum / loop_count
             print("Average loop time: %f" % avg_loop_time)

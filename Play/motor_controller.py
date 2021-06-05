@@ -14,6 +14,7 @@ from pybear import Manager
 import math
 from Settings.Robot import *
 import pdb
+import time
 
 
 class MotorController(object):
@@ -330,6 +331,28 @@ class MotorController(object):
                                                    ['goal_position', 'goal_velocity', 'goal_iq'], command, error_mode=1)
             goals = [sum(data[0]) for data in rtn]
             goals = round(sum(goals), 5)
+            print("rtn: ", rtn)
+            print("goals: ", goals, "checksum: ", checksum)
+
+    def set_bulk_goals(self, gesture, goal_pos, goal_vel, goal_iq):
+        """
+        Set all goals
+
+        :param str gesture: The present gesture of DAnTE
+        :param list goal_pos: The goal position command to send
+        :param list goal_vel: The goal_velocity command to send
+        :param list goal_iq: The goal iq command to send
+        """
+        command = []
+        for i in range(len(goal_pos)):
+            command.append([goal_pos[i], goal_vel[i], goal_iq[i]])
+
+        if gesture == 'I':
+            # Pinch mode, not using THUMB
+            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M], ['goal_position', 'goal_velocity', 'goal_iq'], command)
+        else:
+            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                                ['goal_position', 'goal_velocity', 'goal_iq'], command)
 
     def grab_loop_comm_velocity(self, gesture, goal_velocity):
         """
