@@ -1426,8 +1426,8 @@ class RobotController(object):
                     error = 2
 
             # Out of while loop -> error or contact
-            # Write goal status one more time so that the last contact finger gets its goal iq command
-            self.MC.grab_loop_write_all(self.robot.palm.gesture, goal_position, goal_approach_speed, goal_iq)
+            # Confirm goals are written correctly
+            self.MC.grab_loop_confirm_goals(self.robot.palm.gesture, goal_position, goal_approach_speed, goal_iq)
 
             avg_loop_time = delta_time_sum / loop_count
             print("Average loop time: %f" % avg_loop_time)
@@ -1482,6 +1482,7 @@ class RobotController(object):
                 # # Get contact iq for all fingers
                 # self.contact_iq = [sum(data) / 20 for data in iq_window]
                 # Run grab_end motion
+                pdb.set_trace()
                 self.grab_end()
 
     def grab_end_old(self, logging=False):

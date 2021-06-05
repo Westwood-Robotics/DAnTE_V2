@@ -13,6 +13,7 @@ This module is used to communicate with the BEAR modules on the DAnTE platform
 from pybear import Manager
 import math
 from Settings.Robot import *
+import pdb
 
 
 class MotorController(object):
@@ -298,27 +299,33 @@ class MotorController(object):
                                                     command, error_mode=1)
         return info_all
 
-    def grab_loop_write_all(self, gesture, goal_pos, goal_vel, goal_iq):
+    def grab_loop_confirm_goals(self, gesture, goal_pos, goal_vel, goal_iq):
         """
-        Main grab loop communication function using bulk_read_write.
+        Confirm all goals
 
         :param str gesture: The present gesture of DAnTE
         :param list goal_pos: The goal position command to send
         :param list goal_vel: The goal_velocity command to send
         :param list goal_iq: The goal iq command to send
-        :return: present info [[pos, vel, iq], ...]
-        :rtype: list of list
         """
+        goals = None
+        checksum = round(sum(goal_pos+goal_vel+goal_iq), 3)
         command = []
         for i in range(len(goal_pos)):
             command.append([goal_pos[i], goal_vel[i], goal_iq[i]])
-
-        if gesture == 'I':
-            # Pinch mode, not using THUMB
-            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M], ['goal_position', 'goal_velocity', 'goal_iq'], command)
-        else:
-            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
-                                ['goal_position', 'goal_velocity', 'goal_iq'], command)
+        while goals != checksum:
+            if gesture == 'I':
+                # Pinch mode, not using THUMB
+                rtn = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
+                                               ['goal_position', 'goal_velocity', 'goal_iq'],
+                                               ['goal_position', 'goal_velocity', 'goal_iq'], command)
+            else:
+                rtn = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                                               ['goal_position', 'goal_velocity', 'goal_iq'],
+                                               ['goal_position', 'goal_velocity', 'goal_iq'], command)
+            goals = [sum(data[0]) for data in rtn]
+            goals = sum(goals)
+            pdb.set_trace()
 
     def grab_loop_comm_velocity(self, gesture, goal_velocity):
         """
