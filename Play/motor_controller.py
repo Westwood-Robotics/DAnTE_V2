@@ -309,23 +309,27 @@ class MotorController(object):
         :param list goal_iq: The goal iq command to send
         """
         goals = None
-        checksum = round(sum(goal_pos+goal_vel+goal_iq), 3)
+        rtn = None
+        if gesture == 'I':
+            checksum = round(sum(goal_pos[:2]+goal_vel[:2]+goal_iq[:2]), 5)
+        else:
+            checksum = round(sum(goal_pos + goal_vel + goal_iq), 5)
         command = []
         for i in range(len(goal_pos)):
             command.append([goal_pos[i], goal_vel[i], goal_iq[i]])
         while goals != checksum:
-            if gesture == 'I':
-                # Pinch mode, not using THUMB
-                rtn = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
-                                               ['goal_position', 'goal_velocity', 'goal_iq'],
-                                               ['goal_position', 'goal_velocity', 'goal_iq'], command)
-            else:
-                rtn = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
-                                               ['goal_position', 'goal_velocity', 'goal_iq'],
-                                               ['goal_position', 'goal_velocity', 'goal_iq'], command)
+            while rtn is None:
+                if gesture == 'I':
+                    # Pinch mode, not using THUMB
+                    rtn = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
+                                                   ['goal_position', 'goal_velocity', 'goal_iq'],
+                                                   ['goal_position', 'goal_velocity', 'goal_iq'], command, error_mode=1)
+                else:
+                    rtn = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                                                   ['goal_position', 'goal_velocity', 'goal_iq'],
+                                                   ['goal_position', 'goal_velocity', 'goal_iq'], command, error_mode=1)
             goals = [sum(data[0]) for data in rtn]
-            goals = sum(goals)
-            pdb.set_trace()
+            goals = round(sum(goals), 5)
 
     def grab_loop_comm_velocity(self, gesture, goal_velocity):
         """
