@@ -242,7 +242,7 @@ class RobotController(object):
                 elapsed_time = time.time() - start_time
                 if elapsed_time < TIMEOUT_INIT:
                     for i in range(3):
-                        if running[i] and abs(position[i] - self.robot.fingerlist[i].travel) < 0.015:
+                        if running[i] and abs(position[i] - self.robot.fingerlist[i].travel) < 0.1:
                             running[i] = False
                             self.MC.damping_mode(self.robot.finger_ids[i])
                             print("%s end travel complete." % self.robot.fingerlist[i].name)
@@ -1394,7 +1394,8 @@ class RobotController(object):
                                 goal_iq[idx] = self.robot.iq_compensation[idx]+goal_preload[idx]
                                 goal_approach_speed[idx] = 0
                                 self.MC.set_mode(self.robot.fingerlist[idx].motor_id, 'force')
-                                self.MC.pbm.set_limit_i_max((self.robot.fingerlist[idx].motor_id, goal_iq[idx]+0.5))
+                                self.MC.pbm.set_limit_i_max((self.robot.fingerlist[idx].motor_id,
+                                                             abs(goal_iq[idx])+0.5))
                                 contact_count += 1
                     # bulk_read_write at loop head.
                     self.robot.contact = contact_count == finger_count
@@ -1482,7 +1483,6 @@ class RobotController(object):
                 # # Get contact iq for all fingers
                 # self.contact_iq = [sum(data) / 20 for data in iq_window]
                 # Run grab_end motion
-                pdb.set_trace()
                 self.grab_end()
 
     def grab_end_old(self, logging=False):
@@ -1797,7 +1797,7 @@ class RobotController(object):
                 goal_iq = [[hold_preload * signed_balance_factor[idx]
                             + self.robot.iq_compensation[idx]] for idx in range(finger_count)]
                 for idx in range(finger_count):
-                    self.MC.pbm.set_limit_i_max((self.robot.fingerlist[idx].motor_id, goal_iq[idx][0] + 0.5))
+                    self.MC.pbm.set_limit_i_max((self.robot.fingerlist[idx].motor_id, abs(goal_iq[idx][0]) + 0.5))
 
                 if self.robot.palm.gesture == 'I':
                     # Pinch mode, not using THUMB
