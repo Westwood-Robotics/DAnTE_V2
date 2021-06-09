@@ -1461,18 +1461,21 @@ class RobotController(object):
                 plt.subplot(311)
                 plt.plot(time_log, position_log_all[0], 'b',
                          time_log, velocity_log_all[0], 'r',
+                         time_log, possibility_log_all[0], 'g',
                          time_log, contact_log_all[0], 'k')
                 plt.grid(True)
 
                 plt.subplot(312)
                 plt.plot(time_log, position_log_all[1], 'b',
                          time_log, velocity_log_all[1], 'r',
+                         time_log, possibility_log_all[1], 'g',
                          time_log, contact_log_all[1], 'k')
                 plt.grid(True)
 
                 plt.subplot(313)
                 plt.plot(time_log, position_log_all[2], 'b',
                          time_log, velocity_log_all[2], 'r',
+                         time_log, possibility_log_all[2], 'g',
                          time_log, contact_log_all[2], 'k')
                 plt.grid(True)
                 plt.show()
@@ -2076,8 +2079,8 @@ class RobotController(object):
         Optimal result from experiments
         """
         if self.approach_speed > 1:
-            lower_threshold = 0.1
-            confident_threshold = 0.2
+            lower_threshold = 0.75
+            confident_threshold = 0.12
         elif self.approach_speed < 0.5:
             lower_threshold = 0.3
             confident_threshold = 0.35
