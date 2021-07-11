@@ -27,4 +27,4 @@ except Exception:
 if PI0:
     DAnTE = RobotDataStructure("DAnTE", "/dev/UB000E", 8000000, "/dev/WR-232H", 2000000, PALM, [INDEX, INDEX_M, THUMB])
 else:
-    DAnTE = RobotDataStructure("DAnTE", "COM4", 8000000, "COM5", 2000000, PALM, [INDEX, INDEX_M, THUMB])
+    DAnTE = RobotDataStructure("DAnTE", "COM3", 8000000, "COM18", 2000000, PALM, [INDEX, INDEX_M, THUMB])
