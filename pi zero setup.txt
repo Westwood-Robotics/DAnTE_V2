@@ -59,7 +59,7 @@ Go to Advanced Options and select Expand Filesystem.
 Pi lite system does not come with wiringpi so please install it:
 $ sudo apt-get install wiringpi
 Check if installation is successful by checking the version of wiringpi:
-$ GPIO -V 
+$ gpio -V 
 
 Install pip3:
 $ sudo apt-get install python3-pip
