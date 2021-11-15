@@ -16,4 +16,15 @@ INDEX = FingerDataStructure("INDEX", BEAR_INDEX, False, ENC_INDEX)
 INDEX_M = FingerDataStructure("INDEX_M", BEAR_INDEX_M, True, ENC_INDEX_M)
 PALM = PalmDataStructure("PALM", DXL_PALM)
 
-DAnTE = RobotDataStructure("DAnTE", "/dev/UB000B", 8000000, "/dev/WR-232H", 2000000, PALM, [INDEX, INDEX_M, THUMB])
+PI0 = False
+try:
+    with open('/sys/firmware/devicetree/base/model', 'r') as sysinfo:
+        if 'raspberry pi zero' in sysinfo.read().lower():
+            PI0 = True
+except Exception:
+    pass
+
+if PI0:
+    DAnTE = RobotDataStructure("DAnTE", "/dev/UB000E", 8000000, "/dev/WR-232H", 2000000, PALM, [INDEX, INDEX_M, THUMB])
+else:
+    DAnTE = RobotDataStructure("DAnTE", "COM3", 8000000, "COM18", 2000000, PALM, [INDEX, INDEX_M, THUMB])

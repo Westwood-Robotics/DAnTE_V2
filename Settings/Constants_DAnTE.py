@@ -96,14 +96,14 @@ IQID_D = 0
 
 POS_P = 5
 POS_I = 0.005
-POS_D = 1.5
+POS_D = 0
 
 VEL_P = 0.4
 VEL_I = 0.005
 VEL_D = 0.0
 
 FOR_P = 1.5
-FOR_I = 0.0
+FOR_I = 0.1
 FOR_D = 0.15
 
 # IDLE
@@ -117,7 +117,7 @@ IDLE_D = 2
 # EXTERNAL ENCODERS
 # ------------------------------
 # Existence of external encoders
-EXTERNAL_ENC = True  # Set to None if not using external encoders
+EXTERNAL_ENC = None  # Set to None if not using external encoders
 
 # We only have SPI bus 0 available to us on the Pi
 BUS = 0
@@ -153,6 +153,8 @@ TIMEOUT_INIT = 5
 # ------------------------------
 MA_window = 15  # Window for simple moving average
 SMOOTHING = 0.07  # Smoothing factor for exponential moving average
+SMOOTHING_IQ = 0.2  # Smoothing factor for exponential moving average on iq
+SMOOTHING_VEL = 0.4  # Smoothing factor for exponential moving average on velocity
 
 ACC_COMP_FACTOR = 0.006
 
@@ -160,17 +162,19 @@ SPRING_COMP_START = 0.7
 SPRING_COMP_BASE = 0.18
 SPRING_COMP_FACTOR = 0.06
 
-approach_speed_min = 0.5
+approach_speed_min = 0.3
 
 # ------------------------------
 # HOLD
 # ------------------------------
-HOLD_P_FACTOR = 1.5
-HOLD_D_FACTOR = 1
+HOLD_P_FACTOR = 0.5
+HOLD_D_FACTOR = 2
+HOLD_D_MAX = 5
 
 # ------------------------------
 # GRIP
 # ------------------------------
-
+GRIP_P_FACTOR = 1
+GRIP_D_FACTOR = 0.2
 
 

@@ -1,7 +1,7 @@
 # DAnTE_V2
 Controller software for Westwood Robotics DAnTE V2
 
-Firmware version 0.1.0
+Firmware version 0.1.2
 
 ## Hardware
 #### 1. DAnTE_V2
@@ -16,13 +16,15 @@ DAnTE_V2 takes 9~12V DC power supply. Lower voltage will cause hardware fault wh
 
 This current DAnTE firmware is only written in Python 3 thus a computer with Python 3 environment is required. 
 
-DAnTE is controlled by a Raspberry Pi 4 by default, but it can also be paired with other computers that has at least equivalent computing power. Keep in mind that an SPI interface is required to communicate with the external encoders, otherwise, please go to Settings/Constants_DAnTE.py and set "EXTERNAL_ENC" to "None".
+DAnTE is controlled by a Raspberry Pi 0 W by default, but it can also be paired with other computers that has at least equivalent computing power. Keep in mind that an SPI interface is required to communicate with the external encoders, otherwise, please go to Settings/Constants_DAnTE.py and set "EXTERNAL_ENC" to "None".
 
 ## Dependencies
 
 #### 1. PyBEAR
 
-Please use PyBEAR from Westwood Robotics [PyBEAR-WR](https://github.com/Westwood-Robotics/PyBEAR-WR), and make sure that you are using version 0.1.2 or higher. 
+Please use PyBEAR from Westwood Robotics [PyBEAR-WR](https://github.com/Westwood-Robotics/PyBEAR-WR).
+
+Must use PyBEAR 0.1.1 or higher.
 
 Due to the differences in data return format, PyBEAR of older versions will **NOT** work with DAnTE V2.
 

@@ -13,6 +13,8 @@ This module is used to communicate with the BEAR modules on the DAnTE platform
 from pybear import Manager
 import math
 from Settings.Robot import *
+import pdb
+import time
 
 
 class MotorController(object):
@@ -65,32 +67,9 @@ class MotorController(object):
 
         :return: None
         """
-        # Set all gains and limits
-        # Current
-        self.pbm.set_p_gain_id((INDEX.motor_id, IQID_P), (THUMB.motor_id, IQID_P), (INDEX_M.motor_id, IQID_P))
-        self.pbm.set_p_gain_iq((INDEX.motor_id, IQID_P), (THUMB.motor_id, IQID_P), (INDEX_M.motor_id, IQID_P))
-        self.pbm.set_i_gain_id((INDEX.motor_id, IQID_I), (THUMB.motor_id, IQID_I), (INDEX_M.motor_id, IQID_I))
-        self.pbm.set_i_gain_iq((INDEX.motor_id, IQID_I), (THUMB.motor_id, IQID_I), (INDEX_M.motor_id, IQID_I))
-        self.pbm.set_d_gain_id((INDEX.motor_id, IQID_D), (THUMB.motor_id, IQID_D), (INDEX_M.motor_id, IQID_D))
-        self.pbm.set_d_gain_iq((INDEX.motor_id, IQID_D), (THUMB.motor_id, IQID_D), (INDEX_M.motor_id, IQID_D))
-        # Velocity PID
-        self.pbm.set_p_gain_velocity((THUMB.motor_id, VEL_P), (INDEX.motor_id, VEL_P), (INDEX_M.motor_id, VEL_P))
-        self.pbm.set_i_gain_velocity((THUMB.motor_id, VEL_I), (INDEX.motor_id, VEL_I), (INDEX_M.motor_id, VEL_I))
-        self.pbm.set_d_gain_velocity((THUMB.motor_id, VEL_D), (INDEX.motor_id, VEL_D), (INDEX_M.motor_id, VEL_D))
-        # Position PID
-        self.pbm.set_p_gain_position((THUMB.motor_id, POS_P), (INDEX.motor_id, POS_P), (INDEX_M.motor_id, POS_P))
-        self.pbm.set_i_gain_position((THUMB.motor_id, POS_I), (INDEX.motor_id, POS_I), (INDEX_M.motor_id, POS_I))
-        self.pbm.set_d_gain_position((THUMB.motor_id, POS_D), (INDEX.motor_id, POS_D), (INDEX_M.motor_id, POS_D))
-
-        # Clear Direct Force PID
-        self.pbm.set_p_gain_force((THUMB.motor_id, 0), (INDEX.motor_id, 0), (INDEX_M.motor_id, 0))
-        self.pbm.set_i_gain_force((THUMB.motor_id, 0), (INDEX.motor_id, 0), (INDEX_M.motor_id, 0))
-        self.pbm.set_d_gain_force((THUMB.motor_id, 0), (INDEX.motor_id, 0), (INDEX_M.motor_id, 0))
-
         # Set safe iq_max and velocity_max
         for f_id in DAnTE.finger_ids:
-            self.pbm.set_limit_iq_max((f_id, IQ_MAX_INIT))
-            self.pbm.set_limit_velocity_max((f_id, VEL_MAX_INIT))
+            self.init_driver(f_id)
 
         print("All motor drivers initialized.")
 
@@ -124,7 +103,7 @@ class MotorController(object):
         Set the actuator into a desired mode.
         Enforced
 
-        :param int mode: Desired mode. (0: torque, 1: velocity, 2: position, 3: force)
+        :param str mode: Desired mode. (torque, velocity, position, force)
         """
         if mode == 'position':
             m = 2
@@ -264,6 +243,177 @@ class MotorController(object):
                                             (BEAR_THUMB, 'present_position', 'present_velocity', 'present_iq'))
         return info_all
 
+    def grab_loop_comm(self, gesture, goal_pos, goal_iq):
+        """
+        Main grab loop communication function using bulk_read_write.
+
+        :param str gesture: The present gesture of DAnTE
+        :param list goal_pos: The goal position command to send
+        :param list goal_iq: The goal iq command to send
+        :return: present info [[pos, vel, iq], ...]
+        :rtype: list of list
+        """
+        command = []
+        for i in range(len(goal_pos)):
+            command.append([goal_pos[i], goal_iq[i]])
+        info_all = None
+        while info_all is None:
+            if gesture == 'I':
+                # Pinch mode, not using THUMB
+                info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
+                                                    ['present_position', 'present_velocity', 'present_iq'],
+                                                    ['goal_position', 'goal_iq'],
+                                                    command, error_mode=1)
+            else:
+                info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                                                    ['present_position', 'present_velocity', 'present_iq'],
+                                                    ['goal_position', 'goal_iq'],
+                                                    command, error_mode=1)
+        return info_all
+
+    def grab_loop_comm_all(self, gesture, goal_pos, goal_vel, goal_iq):
+        """
+        Main grab loop communication function using bulk_read_write.
+
+        :param str gesture: The present gesture of DAnTE
+        :param list goal_pos: The goal position command to send
+        :param list goal_vel: The goal_velocity command to send
+        :param list goal_iq: The goal iq command to send
+        :return: present info [[pos, vel, iq], ...]
+        :rtype: list of list
+        """
+        command = []
+        for i in range(len(goal_pos)):
+            command.append([goal_pos[i], goal_vel[i], goal_iq[i]])
+        info_all = None
+        while info_all is None:
+            if gesture == 'I':
+                # Pinch mode, not using THUMB
+                info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
+                                                    ['present_position', 'present_velocity', 'present_iq'],
+                                                    ['goal_position', 'goal_velocity', 'goal_iq'],
+                                                    command, error_mode=1)
+            else:
+                info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                                                    ['present_position', 'present_velocity', 'present_iq'],
+                                                    ['goal_position', 'goal_velocity', 'goal_iq'],
+                                                    command, error_mode=1)
+        return info_all
+
+    def grab_loop_confirm_goals(self, gesture, goal_pos, goal_vel, goal_iq):
+        """
+        Confirm all goals
+
+        :param str gesture: The present gesture of DAnTE
+        :param list goal_pos: The goal position command to send
+        :param list goal_vel: The goal_velocity command to send
+        :param list goal_iq: The goal iq command to send
+        """
+        goals = None
+        if gesture == 'I':
+            checksum = round(sum(goal_pos[:2]+goal_vel[:2]+goal_iq[:2]), 5)
+        else:
+            checksum = round(sum(goal_pos + goal_vel + goal_iq), 5)
+        command = []
+        for i in range(len(goal_pos)):
+            command.append([goal_pos[i], goal_vel[i], goal_iq[i]])
+        while goals != checksum:
+            rtn = None
+            while rtn is None:
+                if gesture == 'I':
+                    # Pinch mode, not using THUMB
+                    rtn = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
+                                                   ['goal_position', 'goal_velocity', 'goal_iq'],
+                                                   ['goal_position', 'goal_velocity', 'goal_iq'], command, error_mode=1)
+                else:
+                    rtn = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                                                   ['goal_position', 'goal_velocity', 'goal_iq'],
+                                                   ['goal_position', 'goal_velocity', 'goal_iq'], command, error_mode=1)
+            goals = [sum(data[0]) for data in rtn]
+            goals = round(sum(goals), 5)
+            print("rtn: ", rtn)
+            print("goals: ", goals, "checksum: ", checksum)
+
+    def set_bulk_goals(self, gesture, goal_pos, goal_vel, goal_iq):
+        """
+        Set all goals
+
+        :param str gesture: The present gesture of DAnTE
+        :param list goal_pos: The goal position command to send
+        :param list goal_vel: The goal_velocity command to send
+        :param list goal_iq: The goal iq command to send
+        """
+        command = []
+        for i in range(len(goal_pos)):
+            command.append([goal_pos[i], goal_vel[i], goal_iq[i]])
+
+        if gesture == 'I':
+            # Pinch mode, not using THUMB
+            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M], ['goal_position', 'goal_velocity', 'goal_iq'], command)
+        else:
+            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                                ['goal_position', 'goal_velocity', 'goal_iq'], command)
+
+    def grab_loop_comm_velocity(self, gesture, goal_velocity):
+        """
+        Main grab loop communication function using bulk_read_write.
+        Only write goal_velocity
+
+        :param str gesture: The present gesture of DAnTE
+        :param list goal_velocity: The goal_velocity command to send
+        :return: present info [[pos, vel, iq], ...]
+        :rtype: list of list
+        """
+        command = []
+        for i in range(len(goal_velocity)):
+            command.append([goal_velocity[i]])
+        info_all = None
+        while info_all is None:
+            if gesture == 'I':
+                # Pinch mode, not using THUMB
+                info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M],
+                                                    ['present_position', 'present_velocity', 'present_iq'],
+                                                    ['goal_velocity'],
+                                                    command, error_mode=1)
+            else:
+                info_all = self.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                                                    ['present_position', 'present_velocity', 'present_iq'],
+                                                    ['goal_velocity'],
+                                                    command, error_mode=1)
+        return info_all
+
+    def set_goal_iq(self, gesture, goal_iq):
+        """
+        Set goal iq to currently in-use fingers using bulk_write.
+
+        :param str gesture: The present gesture of DAnTE
+        :param list goal_iq: The goal iq command to send
+        """
+        command = []
+        for i in range(len(goal_iq)):
+            command.append([goal_iq[i]])
+        if gesture == 'I':
+            # Pinch mode, not using THUMB
+            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M], ['goal_iq'], command)
+        else:
+            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB], ['goal_iq'], command)
+
+    def set_goal_position(self, gesture, goal_pos):
+        """
+        Set goal position to currently in-use fingers using bulk_write.
+
+        :param str gesture: The present gesture of DAnTE
+        :param list goal_pos: The goal position command to send
+        """
+        command = []
+        for i in range(len(goal_pos)):
+            command.append([goal_pos[i]])
+        if gesture == 'I':
+            # Pinch mode, not using THUMB
+            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M], ['goal_position'], command)
+        else:
+            self.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB], ['goal_position'], command)
+
     def get_present_status_index(self):
         """
         Get present status of all fingers
@@ -288,10 +438,10 @@ class MotorController(object):
         """
         Get present position of all fingers
         """
-        # TODO: replace with bulk_comm function
-        # info_all = self.pbm.bulk_read((BEAR_THUMB, BEAR_INDEX, BEAR_INDEX),
-        #                              ('present_position', 'present_velocity', 'present_iq'))
-        info_all = self.pbm.get_present_position(BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB)
+        info_all = None
+        while info_all is None:
+            info_all = self.pbm.bulk_read([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB], ['present_position'], error_mode=1)
+        info_all = [i[0][0] for i in info_all]
         return info_all
 
     def save_congif_all(self):

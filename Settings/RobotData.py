@@ -71,6 +71,7 @@ class RobotDataStructure(object):
         self.initialized = False  # Full hand has been initialized
         self.contact = False  # Object contact status
         self.booted = False  # System has booted
+        self.iq_compensation = [0, 0, 0]  # iq compensation for more reliable contact possibility
 
 
 
