@@ -26,7 +26,7 @@ Please use PyBEAR from Westwood Robotics [PyBEAR-WR](https://github.com/Westwood
 
 Must use PyBEAR 0.1.1 or higher.
 
-Due to the differences in data return format, the current RoMeLa PyBEAR will **NOT** work with DAnTE V2.
+Due to the differences in data return format, PyBEAR of older versions will **NOT** work with DAnTE V2.
 
 #### 2. Dynamixel SDK
 
@@ -35,7 +35,7 @@ The Dynamixel SDK is also required to communicate with the Robotis X series actu
 #### 3. Udev Rules
 
 Using the Boosted USB2BEAR/USB2RoMeLa device to communicate with BEAR, must add 00-WestwoodRobotics.rules from PyBEAR-WR_Rev first.
-Use a generic FT232 dangle to communicate with Dynamixel in palm, add Util/00-WR_DAnTE.rules before using
+Use a generic FT232 dangle to communicate with Dynamixel in palm, add Util/00-WR_DAnTE.rules before using.
 Modify 00-WR_DAnTE.rules accordingly, if needed.
 
 Move 00-WR_DAnTE.rules file into /etc/udev/rules.d/ with 'sudo cp'

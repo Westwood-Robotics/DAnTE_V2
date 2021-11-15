@@ -1,3 +1,4 @@
+
 1. Write the Raspberry Pi lite OS into your SD card(at least 4GB) with Raspberry Pi Imager
 
 2. Once done, unplug your SD card from your computer then plug it back in. Yous hould be able to see and open the boot section in the SD card with File Explorer. If not, open up Disk Management and assign a drive letter to boot.
@@ -85,3 +86,91 @@ $ sudo apt-get install git
 
 11. Now your Pi Zero should be basically ready. 
 Continue setting it up according to the requests of your specific applications.
+=======
+1. Write the Raspberry Pi lite OS into your SD card(at least 4GB) with Raspberry Pi Imager
+
+2. Once done, unplug your SD card from your computer then plug it back in. Yous hould be able to see and open the boot section in the SD card with File Explorer. If not, open up Disk Management and assign a drive letter to boot.
+
+3. Setup your WiFi credentials
+Within the boot directory, Right-Click > New > Text Document and rename the document to wpa_supplicant.conf - Make sure that you change the file extension from .txt to .conf - You will be prompted to confirm the extension change.
+
+Open the empty file created. You may be prompted to select a program you'd like to open the file with - just choose Notepad.
+Enter the following text into the file, replacing the placeholder text with your own details, including country.
+
+country=US
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+network={
+	ssid="MyWiFiNetwork"
+	psk="aVeryStrongPassword"
+} 
+
+4. Enable SSH
+Create an empty file in the boot directory called ssh. Make sure that the file has no file extension.
+
+From now on, we will be able to do all the following via SSH. Default username is pi and the password is raspberry
+
+5. Inser the SD card into your Pi Zero W and power it up. Wait for it to boot up and connect to your network. This can take up to 5 min.
+
+6. SSH into your Pi zero W.
+
+7. Setup Wifi auto connection
+
+$ sudo nano /etc/network/interfaces
+
+This file contains all known network interfaces, it'll probably have a line or two in there already.
+
+Change the first line (or add it if it's not there) to:
+
+auto wlan0
+
+Then at the bottom of the file, add these lines telling the Raspberry Pi to allow wlan as a network connection method and use the /etc/wpa_supplicant/wpa_supplicant.conf as your configuration file.
+
+allow-hotplug wlan0
+iface wlan0 inet dhcp
+wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf
+iface default inet dhcp
+
+8. Update system:
+$ sudo apt-get update 
+$ sudo apt-get upgrade
+$ sudo apt-get autoremove
+
+This might take a while.
+
+9. Enable SPI
+$ sudo raspi-config
+Then go to interface Options -> SPI and enable it.
+It's also recommended to Expand Filesystem. This ensures that all of the SD card is avaliable. 
+Go to Advanced Options and select Expand Filesystem.
+
+10. Install dependencies
+Pi lite system does not come with wiringpi so please install it:
+$ sudo apt-get install wiringpi
+Check if installation is successful by checking the version of wiringpi:
+$ gpio -V 
+
+Install pip3:
+$ sudo apt-get install python3-pip
+Check if installation is successful by checking the version of pip3:
+$ pip3 -V 
+Note: any pip3 operation on pi zero appears to be unreasonablely slow, so be patient.
+
+Install spidev with pip3:
+$ pip3 install spidev
+
+libatlas3-base is needed for numpy to function on raspberry pi:
+$ sudo apt-get install libatlas3-base
+
+Install numpy and pyserial:
+$ pip3 install numpy pyserial
+
+Check for successful installation.:
+$ pip3 show spidev numpy pyserial
+
+It's also recommended to install Git for your convenience:
+$ sudo apt-get install git
+
+11. Now your Pi Zero should be basically ready. 
+Continue setting it up according to the requests of your specific applications.
+
