@@ -1,9 +1,9 @@
 #!usr/bin/env python
-__author__ = "X Zhang"
-__email__ = "xzhang@westwoodrobotics.net"
-__copyright__ = "Copyright 2020 Westwood Robotics Corp."
-__date__ = "Feb 14, 2020"
-__version__ = "0.1.0"
+__author__ = "X. Zhang"
+__email__ = "xzhang@westwoodrobotics.io"
+__copyright__ = "Copyright 2020~2022 Westwood Robotics"
+__date__ = "May 8, 2022"
+__version__ = "0.1.3"
 __status__ = "Beta"
 
 from Settings.Constants_DAnTE import *
@@ -53,8 +53,6 @@ class RobotDataStructure(object):
         self.DXL_baudrate = DXL_baudrate
         self.DXL_port = DXL_port
 
-        if palm is None:
-            palm = PalmDataStructure("PALM", DXL_PALM)
         if fingerlist is None:  # If no finger specified, assume there is only a THUMB
             fingerlist = [FingerDataStructure("THUMB", BEAR_THUMB, False)]
 

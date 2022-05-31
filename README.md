@@ -1,18 +1,22 @@
 # DAnTE_V2
 Controller software for Westwood Robotics DAnTE V2
 
-Firmware version 0.1.2
+Firmware version 0.1.3
 
 ## Hardware
-#### 1. DAnTE_V2
+### 1. DAnTE_V2
 
-The current version of DAnTE V2 has three fingers: (start from the fixed finger and count clockwise when looking at the palm from the top) THUMB, INDEX, INDEX_M. All fingers has 3 joints, 2 DoF and are under actuated, driven by one Koala BEAR V2 actuator by Westwood Robotics. The INDEX and INDEX_M fingers are mirrored to each other, and are mirrorly coupled and driven by a single Dynamixel servo motor by Robotis so that they can respectively rotate along their axis perpendicular to the palm. The BEARs communicate with controlling device via Westwood Robotics USB2BEAR dangle, and an ordinary RS232 device is needed for the Dynamixel. 
+The current version of DAnTE is V2 and there is also a 2-fingered variant (DAnTE-2F) developed for customers.
+
+The regular version of DAnTE has three fingers: (start from the fixed finger and count clockwise when looking at the palm from the top) THUMB, INDEX, INDEX_M. All fingers has 3 joints, 2 DoF and are under actuated, driven by one Koala BEAR V2 actuator by Westwood Robotics. The INDEX and INDEX_M fingers are mirrored to each other, and are mirrorly coupled and driven by a single Dynamixel servo motor by Robotis so that they can respectively rotate along their axis perpendicular to the palm. The BEARs communicate with controlling device via Westwood Robotics USB2BEAR dangle, and an ordinary RS232 device is needed for the Dynamixel. 
 
 Each finger has an external encoder (12bit Encoder-R12S10 by Westwood Robotics) at the base joint (MCP joint) of the finger. Absolute kinematics of a finger can be acquired when combine the external encoder reading and the BEAR position reading. The encoders use SPI protocal to communicate with controlling device.
 
+DAnTE-2F only has INDEX and INDEX_M fingers mirrored to each other and they are not able to rotate along their axis perpendicular to the palm, thus DAnTE-2F is always in "Pinch" gesture.
+
 DAnTE_V2 takes 9~12V DC power supply. Lower voltage will cause hardware fault while higher voltage will cause hardware damage upon power up.
 
-#### 2. Controlling Device
+### 2. Controlling Device
 
 This current DAnTE firmware is only written in Python 3 thus a computer with Python 3 environment is required. 
 
@@ -20,7 +24,7 @@ DAnTE is controlled by a Raspberry Pi 0 W by default, but it can also be paired 
 
 ## Dependencies
 
-#### 1. PyBEAR
+### 1. PyBEAR
 
 Please use PyBEAR from Westwood Robotics [PyBEAR-WR](https://github.com/Westwood-Robotics/PyBEAR-WR).
 
@@ -28,11 +32,11 @@ Must use PyBEAR 0.1.1 or higher.
 
 Due to the differences in data return format, PyBEAR of older versions will **NOT** work with DAnTE V2.
 
-#### 2. Dynamixel SDK
+### 2. Dynamixel SDK
 
 The Dynamixel SDK is also required to communicate with the Robotis X series actuator that is driving the index fingers on DAnTE V2. You can download it here:[Dynamixel SDK](https://github.com/ROBOTIS-GIT/DynamixelSDK)
 
-#### 3. Udev Rules
+### 3. Udev Rules
 
 Using the Boosted USB2BEAR/USB2RoMeLa device to communicate with BEAR, must add 00-WestwoodRobotics.rules from PyBEAR-WR_Rev first.
 Use a generic FT232 dangle to communicate with Dynamixel in palm, add Util/00-WR_DAnTE.rules before using.
@@ -44,11 +48,11 @@ Reload the rules
 sudo udevadm control --reload
 ```
 
-#### 4. SciPy
+### 4. SciPy
 
 The SciPy package is required for kinematics. Install with pip before playing with DAnTE. 
 
-#### 5. WiringPi & spidev
+### 5. WiringPi & spidev
 
 The WiringPi and spidev packages are required for reading external encoders. 
 WiringPi should be PRE-INSTALLED with standard Raspbian systems. Otherwise, refer to http://wiringpi.com/download-and-install/
@@ -58,17 +62,43 @@ If you are not controlling DAnTE from a Raspberry Pi(thus not using external enc
 
 ## Work with DAnTE
 
-#### 0. Preperation
+### 0. Preperation
 
-###### 0.0 Robot.py
+##### 0.0 Robot.py
 
-###### 0.1 Calibration
+#### 0.1 Start the Robot
 
-Perform calibration before your first run after open-box, and then after every repair/maintemance, or as prompt during usage. To calibrate, cd into ./DAnTE_V2/ directory and run calibration.py(assuming python3):
+Make sure you import "RobotController" and defined robots "Settings.Robot" to start with:
 ```bash
-python3 -m Play.calibration
+from Play.robot_controller import RobotController
+from Settings.Robot import *
+```
+The create an instance of the RobotController, for example:
+```bash
+rc = RobotController()
+```
+If you are using a regular DAnTE, there is no need to define the robot but it has to be specified if you are using variants such as DAnTE-2F:
+```bash
+rc = RobotController(robot=DAnTE_2F)
 ```
 
+And before anything, run the "start_robot" function:
+```bash
+rc.start_robot()
+```
+
+#### 0.1 Calibration
+
+Perform calibration before your first run after open-box, and then after every repair/maintemance, or as prompt during usage. 
+
+There are two types of calibrations: geometry and iq. A proper geometry calibration is the minimum requirement for DAnTE to be able to do anything, and the iq calibration will improve DAnTE's force-sensing contact detection performance.
+
+###### Geometry Calibration
+
+To perform geometry calibration, run the "calibration_geometry" function:
+```bash
+rc.calibration_geometry()
+```
 Then follow instructions as prompt. You can select to calibrate just one single finger(not yet ready) or the whole hand.
 
 The calibration checks the integrity of the system and sets zero references for all actuators. Then it looks for the range of motion for all the fingers or the selected finger. Calibration results will be writen into ../Settings/initials.txt for initialization reference.
@@ -81,8 +111,23 @@ All actuators involved get pinged at first when calibration. If there is an comm
 | 2  | THUMB  |
 | 1  | INDEX_M  |
 | 0  | INDEX  |
+
+###### Iq Calibration
+To perform iq calibration, run the "calibration_iq" function:
+```bash
+rc.calibration_iq()
+```
+Note that iq calibration requires DAnTE to be initialized, by running the "initialization" function:
+```bash
+rc.initialization()
+```
+Please refer to the following section _0.2 Initialization_ for more details on initializing DAnTE.
+
+The iq calibration will move the fingers slowly from their wide-open position to half-closed position while taking down the iq data. The the fingers will return to their wide-open position and the process is completed. 
+
+Iq calibration will improve DAnTE's force-sensing contact detection performance.
  
-###### 0.2 Initialization
+#### 0.2 Initialization
 
 Initialization is a function defined in the robot_controller module. Run initialization first after booting the system. Make sure system is started with ```start_robot()``` function.
 
@@ -127,7 +172,7 @@ and each bit representing an error:
 | 1  | Position out of range |
 | 0  | home_offset abnormal |
 
-#### 1. Motions
+### 1. Motions
 
 To run DAnTE V2, first create an instance of RobotController:
 ```
@@ -136,12 +181,16 @@ from Play.robot_controller import RobotController
 
 rc = RobotController(robot=DAnTE)
 ```
-The default robot for RobotController is DAnTE, thus you can also omit that setting, and simply do:
+The default robot for RobotController is DAnTE, thus you can also omit that setting if you are using a regular DAnTE, and simply do:
 ```
 rc = RobotController()
 ```
+However, it has to be specified if you are using variants such as DAnTE-2F:
+```bash
+rc = RobotController(robot=DAnTE_2F)
+```
 
-###### 1.0 Start the system
+#### 1.0 Start and initialized the system
 
 Before you can do anything with DAnTE, you must start the system with ```start_robot()``` function:
 ```
@@ -149,16 +198,21 @@ rc.start_robot()
 ```
 This function pings all actuators, then reads the initals.txt and populate the variables of the robot instance.
 
-###### 1.1 Grab
+Then run initialization to initialize the system:
+```
+rc.initialization()
+```
 
-Use ```grab(gesture, mode, \**options)``` function for object grabbing. 
+#### 1.1 Grab
+
+Use ```grab(mode, \**options)``` function for object grabbing. 
 
 This function controls the grab motion of DAnTE:
-- Grab with a gesture, tripod(Y), pinch(I) or parallel(P)
 - Specify a grab mode: (H)old or (G)rip
   - In Hold mode, DAnTE will just hold the object with a big damping but nearly no gripping force. The object can escape relatively easily. Damping is adjected according to the final_strength setting.
   - In Grip mode, the fingers will move further 'into' the object to create a firm grip, until the final_strength is reached. In this mode, the final_strength specify the final gripping current(A) on each finger. In Parallel gesture, the final gripping current(A) on the THUMB is doubled for force balance purpose.
 - Optional kwargs: (if not specified, go with a default value)
+  - Gesture (gesture), default is present gesture. Grab with a gesture, tripod(Y), pinch(I) or parallel(P) 
   - Approach speed (approach_speed), default = 1
   - Approach stiffness (approach_stiffness), default = 1
   - Detection current (detect_current), default = 0.42
@@ -166,7 +220,7 @@ This function controls the grab motion of DAnTE:
   - Maximum torque current (max_iq), default = 1.5
   - Data log function (logging), default = False
 
-###### 1.2 Release
+#### 1.2 Release
 
 Use ```release(release_mode, \*hold_stiffness)``` function for releasing.
 
@@ -175,7 +229,7 @@ This function instructs DAnTE to release, with three different modes to be speci
 - (L)et-go = release just a little bit so that the object can escape
 - (F)ul-release = fingers reset
 
-###### 1.3 Error
+#### 1.3 Error
 
 And error code will be generated if there is any thing wrong during these operations. The error code and their meanings are:
 
@@ -186,17 +240,17 @@ And error code will be generated if there is any thing wrong during these operat
 | 3  | Initialization  |
 | 9  | Invalid input  |
 
-#### 2. Tuning
+### 2. Tuning
 
 Tune DAnTE via Macros_DAnTE, rarely need to modify Contants_DAnTE.
 
-#### 3. Forward Kinematics
+### 3. Forward Kinematics
 All forward kinematics related basic functions are included in the module Forward_Kinematics/forward_kin.py, and are integrated into Play.robot_controller.py
-###### 3.1 Update finger joint angles
+#### 3.1 Update finger joint angles
 This is the first step to update robot with current kinematics. To do so, call ```update_angles()```
 
 This will populate all all finger.angles in the robot instance will present values. The form of this attribute is a list of finger phalanx angles: [alpha, beta, gamma, delta]
-###### 3.2 Update finger forward kinematics
+#### 3.2 Update finger forward kinematics
 Call ```forward_kinematics(\*finger)``` with finger option to calculate the forward kinematics of a finger or all fingers based on the current values stored in finger.angles. The result will populate the corresponding finger(s)' forward kinematics attribute finger.joint_locations. The form of this attribute is an numpy array of 3D joint_locations = [MCP; PIP; DIP; Tip]
 
 Specify the finger to be updated with the \*finger option. 
@@ -207,7 +261,7 @@ If no option specified, all fingers get updated.
 
 Note that the forward kinematics will be calculated based on the present values in finger.angles so make sure to update finger angles first.
 
-###### 3.3 Visualization
+#### 3.3 Visualization
 ```visualization()``` function will plot the robot using the forward kinematics stored in finger.joint_locations.
 
 ## Beta Functions

@@ -9,6 +9,7 @@ __status__ = "Beta"
 # Run this script to perform a system demo. Choose options as prompted.
 
 from Play.robot_controller import RobotController
+from Settings.Robot import *
 import time
 
 run = False
