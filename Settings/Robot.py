@@ -33,9 +33,15 @@ except Exception:
 
 if PI0:
     # Regular DAnTE:
-    DAnTE = RobotDataStructure("DAnTE", "/dev/UB000E", 8000000, "/dev/WR-232H", 2000000, PALM, [INDEX, INDEX_M, THUMB])
+    DAnTE = RobotDataStructure("DAnTE", "/dev/UB0010", 8000000, "/dev/WR-232H", 2000000, PALM, [INDEX, INDEX_M, THUMB])
     # 2-Finger DAnTE:
-    DAnTE_2F = RobotDataStructure("DAnTE_2F", "/dev/UB000E", 8000000, None, 0, None, [INDEX, INDEX_M])
+    DAnTE_2F = RobotDataStructure(name="DAnTE_2F",
+                                  BEAR_port="/dev/UB0010",
+                                  BEAR_baudrate=8000000,
+                                  DXL_port=None,
+                                  DXL_baudrate=0,
+                                  palm=Empty_PALM,
+                                  fingerlist=[INDEX, INDEX_M])
 else:
     # Regular DAnTE:
     DAnTE = RobotDataStructure("DAnTE", BEAR_port, 8000000, DXL_port, 2000000, PALM, [INDEX, INDEX_M, THUMB])
