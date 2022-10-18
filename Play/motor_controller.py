@@ -1,9 +1,9 @@
 #!usr/bin/env python
 __author__ = "X Zhang"
-__email__ = "xzhang@westwoodrobotics.net"
-__copyright__ = "Copyright 2020 Westwood Robotics Corp."
-__date__ = "Feb 14, 2020"
-__version__ = "0.1.0"
+__email__ = "xzhang@westwoodrobotics.io"
+__copyright__ = "Copyright 2020~2022 Westwood Robotics"
+__date__ = "May 8, 2022"
+__version__ = "0.1.3"
 __status__ = "Beta"
 
 '''
@@ -61,14 +61,14 @@ class MotorController(object):
 
         print("Motor driver initialized for Motor:%d." % m_id)
 
-    def init_driver_all(self):
+    def init_driver_all(self, id_list):
         """
         Initialize all drivers with preset PID and safe limits.
 
         :return: None
         """
         # Set safe iq_max and velocity_max
-        for f_id in DAnTE.finger_ids:
+        for f_id in id_list:
             self.init_driver(f_id)
 
         print("All motor drivers initialized.")
@@ -98,7 +98,7 @@ class MotorController(object):
             # print("Trying hard to set_mode")
             # time.sleep(0.1)
 
-    def set_mode_all(self, mode):
+    def set_mode_all(self, id_list, mode):
         """
         Set the actuator into a desired mode.
         Enforced
@@ -116,13 +116,25 @@ class MotorController(object):
         else:
             print("Invalid mode.")
             return
-        self.pbm.set_mode((BEAR_THUMB, m), (BEAR_INDEX, m), (BEAR_INDEX_M, m))
-        # Check for change
-        status = [self.pbm.get_mode(BEAR_THUMB)[0][0], self.pbm.get_mode(BEAR_INDEX)[0][0], self.pbm.get_mode(BEAR_INDEX_M)[0][0]]
+
+        status = []
+        for id in id_list:
+            self.pbm.set_mode((id, m))
+            # Check for change
+            status.append(self.pbm.get_mode(id)[0][0])
+        # self.pbm.set_mode((BEAR_THUMB, m), (BEAR_INDEX, m), (BEAR_INDEX_M, m))
+        # # Check for change
+        # status = [self.pbm.get_mode(BEAR_THUMB)[0][0], self.pbm.get_mode(BEAR_INDEX)[0][0], self.pbm.get_mode(BEAR_INDEX_M)[0][0]]
+
         checksum = sum([i == m for i in status])
-        while checksum != 3:
-            self.pbm.set_mode((BEAR_THUMB, m), (BEAR_INDEX, m), (BEAR_INDEX_M, m))
-            status = [self.pbm.get_mode(BEAR_THUMB)[0][0], self.pbm.get_mode(BEAR_INDEX)[0][0], self.pbm.get_mode(BEAR_INDEX_M)[0][0]]
+        while checksum != len(id_list):
+            status.clear()
+            # self.pbm.set_mode((BEAR_THUMB, m), (BEAR_INDEX, m), (BEAR_INDEX_M, m))
+            # status = [self.pbm.get_mode(BEAR_THUMB)[0][0], self.pbm.get_mode(BEAR_INDEX)[0][0], self.pbm.get_mode(BEAR_INDEX_M)[0][0]]
+            for id in id_list:
+                self.pbm.set_mode((id, m))
+                # Check for change
+                status.append(self.pbm.get_mode(id)[0][0])
             checksum = sum([i == m for i in status])
             print("Trying hard to set_mode_all")
             print(status)
@@ -143,21 +155,31 @@ class MotorController(object):
         else:
             return False
 
-    def torque_enable_all(self, val):
+    def torque_enable_all(self, id_list, val):
         """
         Torque enable.
 
         :param int val: Enable/disable torque. (0: disable, 1: enable)
         """
 
+        status = []
+        for id in id_list:
+            self.pbm.set_torque_enable((id, val))
+            # Check for change
+            status.append(bool(self.pbm.get_torque_enable(id)[0][0]))
         # Check for change
-        status = [bool(self.pbm.get_torque_enable(BEAR_THUMB)[0][0]), bool(self.pbm.get_torque_enable(BEAR_INDEX)[0][0]),
-                  bool(self.pbm.get_torque_enable(BEAR_INDEX_M)[0][0])]
+        # status = [bool(self.pbm.get_torque_enable(BEAR_THUMB)[0][0]), bool(self.pbm.get_torque_enable(BEAR_INDEX)[0][0]),
+        #           bool(self.pbm.get_torque_enable(BEAR_INDEX_M)[0][0])]
         checksum = sum([i == val for i in status])
-        while checksum != 3:
-            self.pbm.set_torque_enable((BEAR_THUMB, val), (BEAR_INDEX, val), (BEAR_INDEX_M, val))
-            status = [bool(self.pbm.get_torque_enable(BEAR_THUMB)[0][0]), bool(self.pbm.get_torque_enable(BEAR_INDEX)[0][0]),
-                      bool(self.pbm.get_torque_enable(BEAR_INDEX_M)[0][0])]
+        while checksum != len(status):
+            status.clear()
+            for id in id_list:
+                self.pbm.set_torque_enable((id, val))
+                # Check for change
+                status.append(bool(self.pbm.get_torque_enable(id)[0][0]))
+            # self.pbm.set_torque_enable((BEAR_THUMB, val), (BEAR_INDEX, val), (BEAR_INDEX_M, val))
+            # status = [bool(self.pbm.get_torque_enable(BEAR_THUMB)[0][0]), bool(self.pbm.get_torque_enable(BEAR_INDEX)[0][0]),
+            #           bool(self.pbm.get_torque_enable(BEAR_INDEX_M)[0][0])]
             checksum = sum([i == val for i in status])
 
         if val:
@@ -165,14 +187,16 @@ class MotorController(object):
         else:
             return [False, False, False]
 
-    def get_enable_all(self):
+    def get_enable_all(self, id_list):
         """
         Get torque enable status of all three BEARs.
 
-        :return: [INDEX enable, INDEX_M enable, THUMB enable]
+        :return: [id0 enable, id1 enable, ...]
         """
-        enable = self.pbm.get_torque_enable(BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB)
-        return [bool(i[0]) for i in enable]
+        enable = []
+        for id in id_list:
+            enable.append(self.pbm.get_torque_enable(id)[0][0])
+        return [bool(i) for i in enable]
 
     def damping_mode_all(self):
         """

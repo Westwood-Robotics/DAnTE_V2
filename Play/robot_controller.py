@@ -1,9 +1,9 @@
 #!usr/bin/env python3
 __author__ = "Xiaoguang Zhang"
-__email__ = "xzhang@westwoodrobotics.net"
-__copyright__ = "Copyright 2020 Westwood Robotics"
-__date__ = "Jan 8, 2020"
-__version__ = "0.1.0"
+__email__ = "xzhang@westwoodrobotics.io"
+__copyright__ = "Copyright 2020~2022 Westwood Robotics"
+__date__ = "May 8, 2022"
+__version__ = "0.1.3"
 __status__ = "Beta"
 
 import time
@@ -16,6 +16,7 @@ from Settings.Robot import *
 from Settings.Constants_DAnTE import *
 import math
 from collections import deque
+import numpy as np
 
 if EXTERNAL_ENC:
     # Only import the following when EXTERNAL_ENC is True as wiringpi and spidev are required.
@@ -38,8 +39,11 @@ class RobotController(object):
 
     def __init__(self, robot=None, bypass_DXL=False, bypass_ext_enc=False):
         if robot is None:
-            print("Robot set to DAnTE by default")
+            print("Robot set to DAnTE by default.")
             robot = DAnTE
+        elif robot is DAnTE_2F:
+            print("Robot set to DAnTE_2F by user specification.")
+            bypass_DXL = True
 
         self.robot = robot
         self.MC = MotorController(self.robot.BEAR_baudrate, self.robot.BEAR_port)
@@ -54,6 +58,7 @@ class RobotController(object):
         if not EXTERNAL_ENC:
             # Force to bypass external encoders when EXTERNAL_ENC=None
             bypass_ext_enc = True
+            print("External encoders are forced to be bypassed. Change Settings.EXTERNAL_ENC if you wish to enable them.")
 
         # When debug, you might want to bypass external encoders
         self.bypass_ext_enc = bypass_ext_enc
@@ -93,6 +98,8 @@ class RobotController(object):
     def start_robot(self):
         # Ping all actuators
         error = self.ping()  # 4 bit respectively for INDEX, INDEX_M, THUMB, Dynamixel, 0b10000 for overall error.
+        if error:
+            print("Failed to start robot. At least ONE(1) is oofline.")
 
         # Read initials, fact check and populate robot object
         init_data = self.read_initials()  # init_data = [['FINGER', motor_id, homing_offset, travel, encoder_offset]...]
@@ -125,13 +132,12 @@ class RobotController(object):
                 self.robot.palm.travel = init_data[3][3]
 
         if error:
-            print("Failed to start robot.")
-            sys.exit()
+            print("Failed to start robot. Please run calibration_geometry() first.")
 
         else:
             # Set Current, Velocity and Position PID as well as safe iq_max and velocity_max,
             # and clear Direct Force PID.
-            self.MC.init_driver_all()
+            self.MC.init_driver_all(self.robot.finger_ids)
             self.robot.booted = True
             print("Welcome aboard, Captain.")
 
@@ -172,27 +178,30 @@ class RobotController(object):
                     print("Palm actuator needs calibration.\nCalibrate it first, or run with bypass_DXL option.")
                     abnormal[3] = 0b00010
                     return False
-
-        # bypass_DXL or PALM checked
-        if self.bypass_DXL:
-            input("Turn index fingers to parallel gesture then press enter.")
+        if self.robot.finger_count > 2:
+            # bypass_DXL or PALM checked
+            if self.bypass_DXL:
+                input("Turn index fingers to parallel gesture then press enter.")
+            else:
+                print("Changing to Parallel gesture...")
+                self.DC.torque_enable(1)
+                self.DC.set_goal_position(self.robot.palm.home)
+                time.sleep(0.5)
+            self.robot.palm.angle = 0
         else:
-            print("Changing to Parallel gesture...")
-            self.DC.torque_enable(1)
-            self.DC.set_goal_position(self.robot.palm.home)
-            time.sleep(0.5)
-        self.robot.palm.angle = 0
+            # There are only 2 fingers, set gesture to pinch-"I"
+            self.robot.palm.gesture = "I"
 
-        self.MC.init_driver_all()
+        self.MC.init_driver_all(self.robot.finger_ids)
 
         # 1. Compare home_offset
-        for i in range(3):
+        for i in range(self.robot.finger_count):
             if round(self.robot.fingerlist[i].homing_offset, 2) != round(
                     self.MC.pbm.get_homing_offset(self.robot.finger_ids[i])[0][0][0], 2):
                 abnormal[i] = abnormal[i] | 0b0001
                 print("%s home_offset abnormal." % self.robot.fingerlist[i].name)
         # 2. Current position with in range
-        present_pos = self.MC.pbm.get_present_position(BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB)
+        present_pos = self.MC.pbm.bulk_read(self.robot.finger_ids, ['present_position'])
         for i, pos in enumerate(present_pos):
             if self.robot.fingerlist[i].mirrored:
                 if pos[0][0] < -0.1 or pos[0][0] > self.robot.fingerlist[i].travel + 0.1:
@@ -222,54 +231,56 @@ class RobotController(object):
 
         # Set motor mode and PID
         # Set mode and limits
-        self.MC.set_mode_all('position')
+        self.MC.set_mode_all(self.robot.finger_ids, 'position')
 
         # 4. Move to End -> complete
-        running = [True, True, True]
-        self.MC.torque_enable_all(1)
-        self.MC.pbm.set_goal_position((BEAR_INDEX, self.robot.fingerlist[0].travel),
-                                      (BEAR_INDEX_M, self.robot.fingerlist[1].travel),
-                                      (BEAR_THUMB, self.robot.fingerlist[0].travel))
-        start_time = time.time()
-        while sum(running):
-            try:
-                status = self.MC.pbm.get_bulk_status((INDEX.motor_id, 'present_position', 'present_velocity'),
-                                                     (INDEX_M.motor_id, 'present_position', 'present_velocity'),
-                                                     (THUMB.motor_id, 'present_position', 'present_velocity'))
-                err = [data[1] for data in status]
-                position = [data[0][0] for data in status]
-                # velocity = [data[0][1] for data in status]
-                elapsed_time = time.time() - start_time
-                if elapsed_time < TIMEOUT_INIT:
-                    for i in range(3):
-                        if running[i] and abs(position[i] - self.robot.fingerlist[i].travel) < 0.1:
-                            running[i] = False
-                            self.MC.damping_mode(self.robot.finger_ids[i])
-                            print("%s end travel complete." % self.robot.fingerlist[i].name)
-                        else:
-                            self.MC.pbm.set_goal_position((self.robot.finger_ids[i], self.robot.fingerlist[i].travel))
-                        if err[i] != 128 and err[i] != 144:
-                            print("%s error, code:" % self.robot.fingerlist[i].name, bin(err[i]))
-                else:
-                    print("Timeout while moving to end. Is there something blocking the finger(s)?")
-                    print("Abnormal:")
-                    for i in range(3):
-                        if running[i]:
-                            abnormal[i] = abnormal[i] | 0b0100
-                            print(self.robot.fingerlist[i].name)
-                    self.MC.damping_mode_all()
-                    running = [False, False, False]
-            except KeyboardInterrupt:
-                running = [0]
-                print("User interrupted.")
-        time.sleep(0.5)
+        if self.robot.finger_count > 2:
+            running = [True, True, True]
+            self.MC.torque_enable_all(self.robot.finger_ids, 1)
+            self.MC.pbm.set_goal_position((BEAR_INDEX, self.robot.fingerlist[0].travel),
+                                          (BEAR_INDEX_M, self.robot.fingerlist[1].travel),
+                                          (BEAR_THUMB, self.robot.fingerlist[0].travel))
+            start_time = time.time()
+            while sum(running):
+                try:
+                    status = self.MC.pbm.get_bulk_status((INDEX.motor_id, 'present_position', 'present_velocity'),
+                                                         (INDEX_M.motor_id, 'present_position', 'present_velocity'),
+                                                         (THUMB.motor_id, 'present_position', 'present_velocity'))
+                    err = [data[1] for data in status]
+                    position = [data[0][0] for data in status]
+                    # velocity = [data[0][1] for data in status]
+                    elapsed_time = time.time() - start_time
+                    if elapsed_time < TIMEOUT_INIT:
+                        for i in range(3):
+                            if running[i] and abs(position[i] - self.robot.fingerlist[i].travel) < 0.1:
+                                running[i] = False
+                                self.MC.damping_mode(self.robot.finger_ids[i])
+                                print("%s end travel complete." % self.robot.fingerlist[i].name)
+                            else:
+                                self.MC.pbm.set_goal_position((self.robot.finger_ids[i], self.robot.fingerlist[i].travel))
+                            if err[i] != 128 and err[i] != 144:
+                                print("%s error, code:" % self.robot.fingerlist[i].name, bin(err[i]))
+                    else:
+                        print("Timeout while moving to end. Is there something blocking the finger(s)?")
+                        print("Abnormal:")
+                        for i in range(3):
+                            if running[i]:
+                                abnormal[i] = abnormal[i] | 0b0100
+                                print(self.robot.fingerlist[i].name)
+                        self.MC.damping_mode_all()
+                        running = [False, False, False]
+                except KeyboardInterrupt:
+                    running = [0]
+                    print("User interrupted.")
+            time.sleep(0.5)
 
         # 5. Move to Home -> complete
         print("Fingers resetting...")
-        running = [True, True, True]
+        running = [True]*self.robot.finger_count
         # Enable torque and go to Home
-        self.MC.damping_release_all()
-        self.MC.torque_enable_all(1)
+        for i in self.robot.finger_ids:
+            self.MC.damping_release(i)
+        self.MC.torque_enable_all(self.robot.finger_ids, 1)
         self.MC.pbm.set_goal_position((THUMB.motor_id, 0),
                                       (INDEX.motor_id, 0),
                                       (INDEX_M.motor_id, 0))
@@ -277,15 +288,13 @@ class RobotController(object):
         start_time = time.time()
         while sum(running):
             try:
-                status = self.MC.pbm.get_bulk_status((INDEX.motor_id, 'present_position', 'present_velocity'),
-                                                     (INDEX_M.motor_id, 'present_position', 'present_velocity'),
-                                                     (THUMB.motor_id, 'present_position', 'present_velocity'))
+                status = self.MC.pbm.bulk_read(self.robot.finger_ids, ['present_position', 'present_velocity'])
                 err = [data[1] for data in status]
                 position = [data[0][0] for data in status]
                 # velocity = [data[0][1] for data in status]
                 elapsed_time = time.time() - start_time
                 if elapsed_time < TIMEOUT_INIT:
-                    for i in range(3):
+                    for i in range(self.robot.finger_count):
                         if abs(position[i]) < 0.1:
                             running[i] = False
                             self.MC.torque_enable(self.robot.finger_ids[i], 0)
@@ -296,7 +305,7 @@ class RobotController(object):
                 else:
                     print("Timeout while resetting. Is there something blocking the finger(s)?")
                     print("Abnormal:")
-                    for i in range(3):
+                    for i in range(self.robot.finger_count):
                         if running[i]:
                             abnormal[i] = abnormal[i] | 0b1000
                             print(self.robot.fingerlist[i].name)
@@ -376,10 +385,10 @@ class RobotController(object):
         else:
             self.robot.palm.home = 0
 
-        self.MC.init_driver_all()
+        self.MC.init_driver_all(self.robot.finger_ids)
 
         # Set Mode
-        self.MC.set_mode_all('velocity')
+        self.MC.set_mode_all(self.robot.finger_ids, 'velocity')
 
         # Set Limits
         for f in self.robot.fingerlist:
@@ -387,23 +396,26 @@ class RobotController(object):
             self.MC.pbm.set_limit_iq_max((f.motor_id, 1.5))
             self.MC.pbm.set_limit_velocity_max((f.motor_id, 2 * VEL_CAL))
 
-        # Home Dynamixel to the parallel position
-        if self.bypass_DXL:
-            usr = input("Move the index fingers to the parallel gesture then press enter.")
-        else:
-            # DXL not bypassed, automatic go to parallel.
-            usr = input("Press ENTER to change to Pinch...")
-            self.DC.set_mode("position")  # Position mode
-            self.DC.torque_enable(1)  # Enable
-            self.DC.set_goal_position(self.robot.palm.home + math.pi * 7 / 15)
-            time.sleep(0.5)
-            usr = input("If everything looks alright press enter to continue, INDEX fingers will return to Parallel.\n"
-                        "Otherwise, press E and enter to exit.")
-            if usr == 'E' or usr == 'e':
-                return
+        if self.robot.finger_count > 2:
+            # Home Dynamixel to the parallel position
+            if self.bypass_DXL:
+                usr = input("Move the index fingers to the parallel gesture then press enter.")
             else:
-                self.DC.set_goal_position(self.robot.palm.home)
+                # DXL not bypassed, automatic go to parallel.
+                usr = input("Press ENTER to change to Pinch...")
+                self.DC.set_mode("position")  # Position mode
+                self.DC.torque_enable(1)  # Enable
+                self.DC.set_goal_position(self.robot.palm.home + math.pi * 7 / 15)
                 time.sleep(0.5)
+                usr = input("If everything looks alright press enter to continue, INDEX fingers will return to Parallel.\n"
+                            "Otherwise, press E and enter to exit.")
+                if usr == 'E' or usr == 'e':
+                    return
+                else:
+                    self.DC.set_goal_position(self.robot.palm.home)
+                    time.sleep(0.5)
+        else:
+            print("There is no PALM actuator to calibrate.")
 
         # Home finger
         # Get home
@@ -413,9 +425,9 @@ class RobotController(object):
 
         elif usr == "y" or usr == "Y":
             # Look for home automatically
-            running = [True, True, True]
+            running = [True]*self.robot.finger_count
             # Enable Torque
-            self.MC.torque_enable_all(1)
+            self.MC.torque_enable_all(self.robot.finger_ids, 1)
             time.sleep(0.1)
             # Goal Velocity
             for f in self.robot.fingerlist:
@@ -425,8 +437,8 @@ class RobotController(object):
                     goal_velocity = VEL_CAL
                 self.MC.pbm.set_goal_velocity((f.motor_id, goal_velocity))
 
-            home_i = [0, 0, 0]
-            detect_count = [0, 0, 0]
+            home_i = [0]*self.robot.finger_count
+            detect_count = [0]*self.robot.finger_count
             print("Looking for home...")
             while sum(running):
                 try:
@@ -441,7 +453,7 @@ class RobotController(object):
                     vels = [i[0][0] for i in status]
                     iq = [i[0][1] for i in status]
 
-                    for i in range(3):
+                    for i in range(self.robot.finger_count):
                         if abs(vels[i]) < VEL_CAL_DETECT and abs(iq[i]) > IQ_CAL_DETECT:
                             if detect_count[i] > 5:
                                 print("%s HOME reached." % self.robot.fingerlist[i].name)
@@ -458,7 +470,7 @@ class RobotController(object):
 
                 except KeyboardInterrupt:
                     running = [0]
-                    self.MC.torque_enable_all(0)
+                    self.MC.torque_enable_all(self.robot.finger_ids, 0)
                     print("User interrupted.")
 
         # Check if HOMING_OFFSET need to be updated
@@ -568,110 +580,108 @@ class RobotController(object):
                 f.encoder_offset = data[idx]
 
         # Get end_pos
+        # Some DAnTEs with different finger configurations need to do this finger by finger, so change the process to
+        # finger-by-finger and auto-reset at the end of each finger.
+        auto = False
         usr = input("Auto set the end limit? (y/n)")
-        if usr == "n" or usr == "N":
-            usr = input("Move all the fingers to the end limit and press enter.\n")
-            end_pos = self.MC.pbm.get_present_position(INDEX.motor_id, INDEX_M.motor_id, THUMB.motor_id)
-            for idx, i in enumerate(end_pos):
-                self.robot.fingerlist[idx].travel = i[0][0]
-                print("end_pos recorded as:", self.robot.fingerlist[idx].name, self.robot.fingerlist[idx].travel)
-
-        elif usr == "y" or usr == "Y":
-            # Look for End-Pos automatically
-            running = [True, True, True]
-            # Enable Torque
-            self.MC.torque_enable_all(1)
-            time.sleep(0.1)
-            # Goal Velocity
-            for f in self.robot.fingerlist:
+        if usr == "y" or usr == "Y":
+            # Mark auto True
+            auto = True
+        for f in self.robot.fingerlist:
+            print("Setting end_pos fo %s..." % f.name)
+            if auto:
+                # Set the end_pos for this finger automatically
+                # Look for End-Pos automatically
+                running = True
+                # Enable Torque
+                self.MC.torque_enable(f.motor_id, 1)
+                time.sleep(0.1)
+                # Goal Velocity
                 if f.mirrored:
                     goal_velocity = VEL_CAL
                 else:
                     goal_velocity = -VEL_CAL
                 self.MC.pbm.set_goal_velocity((f.motor_id, goal_velocity))
 
-            time.sleep(0.5)
-            end_i = [0, 0, 0]
-            detect_count = [0, 0, 0]
-            print("Looking for end_pos...")
-            while sum(running):
-                try:
-                    status = None
-                    while status is None:
-                        status = self.MC.pbm.bulk_read(self.robot.finger_ids, ['present_velocity', 'present_iq'],
-                                                       error_mode=1)
-                    # status = motor_controller.pbm.get_bulk_status((INDEX.motor_id, 'present_velocity', 'present_iq'),
-                    #                                               (INDEX_M.motor_id, 'present_velocity', 'present_iq'),
-                    #                                               (THUMB.motor_id, 'present_velocity', 'present_iq'))
-                    err = [i[1] for i in status]
-                    vels = [i[0][0] for i in status]
-                    iq = [i[0][1] for i in status]
+                time.sleep(0.5)
+                end_i = 0
+                detect_count = 0
+                print("Looking for end_pos...")
+                while running:
+                    try:
+                        status = None
+                        while status is None:
+                            status = self.MC.pbm.bulk_read([f.motor_id], ['present_velocity', 'present_iq'],
+                                                           error_mode=1)
+                        err = status[0][1]
+                        vel = status[0][0][0]
+                        iq = status[0][0][1]
 
-                    for i in range(3):
-                        if abs(vels[i]) < VEL_CAL_DETECT and abs(iq[i]) > IQ_CAL_DETECT:
-                            if detect_count[i] > 20:
+                        if abs(vel) < VEL_CAL_DETECT and abs(iq) > IQ_CAL_DETECT:
+                            if detect_count > 20:
                                 # TODO: check total travel value
-                                print("%s end_pos reached." % self.robot.fingerlist[i].name)
-                                self.robot.fingerlist[i].travel = \
-                                    self.MC.pbm.get_present_position(self.robot.finger_ids[i])[0][0][0]
-                                print("%s end_pos acquired." % self.robot.fingerlist[i].name)
-                                end_i[i] = iq[i]
-                                print("%s end_i acquired." % self.robot.fingerlist[i].name)
-                                self.MC.torque_enable(self.robot.finger_ids[i], 0)
+                                print("%s end_pos reached." % f.name)
+                                f.travel = self.MC.pbm.get_present_position(f.motor_id)[0][0][0]
+                                print("%s end_pos acquired." % f.name)
+                                end_i = iq
+                                print("%s end_i acquired." % f.name)
+                                self.MC.torque_enable(f.motor_id, 0)
                                 print("%s end_pos recorded as: % 8.2f" %
-                                      (self.robot.fingerlist[i].name, self.robot.fingerlist[i].travel))
-                                print("End iq was %2.2f" % end_i[i])
-                                print("End velocity was %2.2f" % vels[i])
-                                running[i] = False
+                                      (f.name, f.travel))
+                                print("End iq was %2.2f" % end_i)
+                                print("End velocity was %2.2f" % vel)
+                                running = False
                             else:
-                                detect_count[i] += 1
-                        if err[i] != 128:
-                            print("%s BEAR error, code:" % self.robot.fingerlist[i].name, bin(err[i]))
+                                detect_count += 1
+                        if err != 128:
+                            print("%s BEAR error, code:" % f.name, bin(err))
 
-                except KeyboardInterrupt:
-                    running = [0]
-                    self.MC.torque_enable_all(0)
-                    end_pos = [0, 0, 0]
-                    print("User interrupted.")
+                    except KeyboardInterrupt:
+                        running = False
+                        self.MC.torque_enable(f.motor_id, 0)
+                        print("User interrupted.")
 
-        usr = input("Reset fingers? (y/n)")
-        if usr == "y" or usr == "Y":
-            for f in self.robot.fingerlist:
-                self.MC.pbm.set_p_gain_position((f.motor_id, POS_P))
-                self.MC.pbm.set_i_gain_position((f.motor_id, POS_I))
-                self.MC.pbm.set_d_gain_position((f.motor_id, POS_D))
-                self.MC.pbm.set_limit_iq_max((f.motor_id, 1))
+                print("Finger will reset in 0.5 sec...")
+                time.sleep(0.5)
+
+            else:
+                # Instruct user to set end limit for this finger
+                usr = input("Move %s to the end limit and press enter.\n" % f.name)
+                f.travel = self.MC.pbm.get_present_position(f.motor_id)[0][0][0]
+                print("end_pos recorded as:", f.name, f.travel)
+                usr = input("Press enter to rest the finger...")
+
+            # Reset finger
+            self.MC.pbm.set_p_gain_position((f.motor_id, POS_P))
+            self.MC.pbm.set_i_gain_position((f.motor_id, POS_I))
+            self.MC.pbm.set_d_gain_position((f.motor_id, POS_D))
+            self.MC.pbm.set_limit_iq_max((f.motor_id, 1))
             time.sleep(0.2)
-            print("Fingers resetting...")
+            print("Finger resetting...")
 
             # Set Mode and Limit
-            self.MC.set_mode_all('position')
+            self.MC.set_mode(f.motor_id, 'position')
 
-            running = [True, True, True]
+            running = True
             # Enable torque and go to Home
-            self.MC.torque_enable_all(1)
-            self.MC.pbm.set_goal_position((THUMB.motor_id, 0.01), (INDEX.motor_id, 0.01), (INDEX_M.motor_id, 0.01))
+            self.MC.torque_enable(f.motor_id, 1)
+            self.MC.pbm.set_goal_position((f.motor_id, 0.01))
             time.sleep(1)
-            while sum(running):
+            while running:
                 try:
-                    # status = self.MC.pbm.get_bulk_status(
-                    #     (INDEX.motor_id, 'present_position'),
-                    #     (INDEX_M.motor_id, 'present_position'),
-                    #     (THUMB.motor_id, 'present_position'))
-                    status = self.MC.pbm.get_present_position(INDEX.motor_id, INDEX_M.motor_id, THUMB.motor_id)
-                    err = [data[1] for data in status]
-                    position = [data[0][0] for data in status]
-                    for i in range(3):
-                        if abs(position[i]) < 0.08:
-                            running[i] = False
-                            self.MC.torque_enable(self.robot.finger_ids[i], 0)
-                        if err[i] != 128:
-                            print("%s BEAR error, code:" % self.robot.fingerlist[i].name, bin(err[i]))
+                    status = self.MC.pbm.get_present_position(f.motor_id)
+                    err = status[0][1]
+                    position = status[0][0][0]
+                    if abs(position) < 0.08:
+                        running = False
+                        self.MC.torque_enable(f.motor_id, 0)
+                    if err != 128:
+                        print("%s BEAR error, code:" % f.name, bin(err))
                 except KeyboardInterrupt:
                     running = [0]
                     print("User interrupted.")
 
-        self.MC.torque_enable_all(0)
+        self.MC.torque_enable_all(self.robot.finger_ids, 0)
         if not self.bypass_DXL:
             self.DC.torque_enable(0)
 
@@ -717,10 +727,11 @@ class RobotController(object):
             print("Robot not initialized. Please run initialization() first.")
             return False
         else:
-            self.change_gesture("P")
+            if self.robot.finger_count>2:
+                self.change_gesture("P")
             # Quasi-static position tracking to figure out iq comp for spring
-            self.MC.set_mode_all('force')
-            self.set_stiffness(3, 45, 1)
+            self.MC.set_mode_all(self.robot.finger_ids, 'force')
+            self.set_stiffness(self.robot.finger_count, 45, 1)
 
             # Generate trajectory
             finger_traj = []
@@ -728,27 +739,34 @@ class RobotController(object):
             for finger in self.robot.fingerlist:
                 finger_traj.append(np.linspace(0, finger.travel, sample_rate))
 
+            avrg_iq = []
+            finger_pos = [[] for i in range(self.robot.finger_count)]
+            finger_velocity = [[] for i in range(self.robot.finger_count)]
+            finger_iq = [[] for i in range(self.robot.finger_count)]
+
             self.set_robot_enable(1)
+
             # Send all fingers to 0 position
-            self.MC.pbm.bulk_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB], ['goal_position'],
-                                   [[finger_traj[0][99]], [finger_traj[1][99]], [finger_traj[2][99]]])
+            goal_cmd = []
+            for i in range(self.robot.finger_count):
+                goal_cmd.append([finger_traj[i][99]])
+            self.MC.pbm.bulk_write(self.robot.finger_ids, ['goal_position'], goal_cmd)
             time.sleep(1)
 
             # Now move along trajectory and collect data
             data = []
             t = []
-            finger_pos = [[], [], []]
-            finger_velocity = [[], [], []]
-            finger_iq = [[], [], []]
             start_time = time.time()
-            for i in range(100, 700):
+            for i in range(100, 600):
                 data.clear()
-                data = self.MC.pbm.bulk_read_write([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+                goal_cmd.clear()
+                for idx in range(self.robot.finger_count):
+                    goal_cmd.append([finger_traj[idx][i]])
+                data = self.MC.pbm.bulk_read_write(self.robot.finger_ids,
                                                    ['present_position', 'present_velocity', 'present_iq'],
-                                                   ['goal_position'],
-                                                   [[finger_traj[0][i]], [finger_traj[1][i]], [finger_traj[2][i]]])
+                                                   ['goal_position'], goal_cmd)
                 t.append(time.time() - start_time)
-                for j in range(3):
+                for j in range(self.robot.finger_count):
                     finger_pos[j].append(data[j][0][0])
                     finger_velocity[j].append(data[j][0][1])
                     finger_iq[j].append(data[j][0][2])
@@ -756,42 +774,41 @@ class RobotController(object):
 
             # Get last data
             data.clear()
-            data = self.MC.pbm.bulk_read([BEAR_INDEX, BEAR_INDEX_M, BEAR_THUMB],
+            data = self.MC.pbm.bulk_read(self.robot.finger_ids,
                                          ['present_position', 'present_velocity', 'present_iq'])
             t.append(time.time() - start_time)
-            for j in range(3):
+            for j in range(self.robot.finger_count):
                 finger_pos[j].append(data[j][0][0])
                 finger_velocity[j].append(data[j][0][1])
                 finger_iq[j].append(data[j][0][2])
 
             time.sleep(0.5)
-            self.set_stiffness(3, 5, 1)
+            self.set_stiffness(self.robot.finger_count, 5, 1)
             self.release('F')
             self.set_robot_enable(0)
 
-            finger_iq_filtered = [[0] * 601, [0] * 601, [0] * 601]
+            finger_iq_filtered = [[0] * 501 for i in range(self.robot.finger_count)]
             for i in range(len(finger_velocity[0])):
-                for j in range(3):
+                for j in range(self.robot.finger_count):
                     if i == 0:
                         finger_iq_filtered[j][i] = finger_iq[j][i]
                     else:
                         finger_iq_filtered[j][i] = SMOOTHING_IQ * finger_iq[j][i] + \
                                                    (1 - SMOOTHING_IQ) * finger_iq_filtered[j][i - 1]
-            avrg_iq = []
-            for data in finger_iq:
+            for data in finger_iq_filtered:
                 avrg_iq.append(sum(data) / len(data))
 
             if plot and PLOTTING_OVERRIDE:
                 plt.figure(1)
                 plt.subplot(311)
-                plt.plot(t, finger_iq_filtered[0], 'g', t, finger_iq[0], 'c', t, avrg_iq[0] * 601, 'k')
+                plt.plot(t, finger_iq_filtered[0], 'g', t, finger_iq[0], 'r', t, [avrg_iq[0]] * 501, 'k')
                 plt.grid(True)
                 plt.subplot(312)
-                plt.plot(t, finger_iq_filtered[1], 'g', t, finger_iq[1], 'c', t, avrg_iq[1] * 601, 'k')
+                plt.plot(t, finger_iq_filtered[1], 'g', t, finger_iq[1], 'r', t, [avrg_iq[1]] * 501, 'k')
                 plt.grid(True)
-                plt.subplot(313)
-                plt.plot(t, finger_iq_filtered[2], 'g', t, finger_iq[2], 'c', t, avrg_iq[2] * 601, 'k')
-                plt.grid(True)
+                # plt.subplot(313)
+                # plt.plot(t, finger_iq_filtered[2], 'g', t, finger_iq[2], 'c', t, avrg_iq[2] * 601, 'k')
+                # plt.grid(True)
                 plt.show()
 
             # Write to file
@@ -844,13 +861,18 @@ class RobotController(object):
             print("WARNING: Robot not enabled, enabling now.")
             self.set_robot_enable(1)
 
-        # if self.gesture == new_gesture:
-        if self.robot.palm.gesture == new_gesture:
+        if self.robot.palm.name == "Empty_PALM":
+            # No palm actuator, not changing
+            print("This robot does not have actuated palm. Gesture not changed.")
+            return True
+
+        elif self.robot.palm.gesture == new_gesture:
             # No need to change
             print('Already in gesture %s.' % new_gesture)
             return True
-        if new_gesture not in ['Y', 'I', 'P']:
-            # Check for invalid input
+
+        elif new_gesture not in ['Y', 'I', 'P']:
+            # Invalid input
             print("Invalid input.")  # TODO: Throw an exception
             return False
 
@@ -917,16 +939,15 @@ class RobotController(object):
             self.robot.palm.gesture = new_gesture
             return True
 
-    def grab(self, gesture, mode, **options):
+    def grab(self, mode, **options):
         # Using a new method of contact detection based on possibility calculated from velocity and iq
         # Using a simplified method of just using velocity mode to approach
         """
         Control grab motion of self.robot
         If keyword options not specified, it will go with a default. See Macros_DAnTE
 
-        :param str gesture: Grab with a gesture, tripod(Y), pinch(I) or parallel(P)
         :param str mode: Specify a grab mode: (H)old or (G)rip
-
+        :keyword str gesture: Grab with a gesture, tripod(Y), pinch(I) or parallel(P). Default is present gesture
         :keyword float approach_speed: Approach speed
         :keyword float final_stiffness: Grip/Hold stiffness
         :keyword float preload: Grip/Hold reload, preload in Amps.
@@ -944,16 +965,17 @@ class RobotController(object):
 
         # Check enable and enable system if not.
         if not self.get_robot_enable():
-            self.MC.torque_enable_all(1)
+            self.MC.torque_enable_all(self.robot.finger_ids, 1)
 
         # 0. Prep
         # Check input
-        if gesture not in ['Y', 'I', 'P']:
-            print("Invalid gesture input.")
+        if mode not in ['H', 'G']:
+            print("Invalid mode input.")
             error = 9
             return error
-        elif mode not in ['H', 'G']:
-            print("Invalid mode input.")
+        gesture = options.get("gesture", self.robot.palm.gesture)
+        if gesture not in ['Y', 'I', 'P']:
+            print("Invalid gesture input.")
             error = 9
             return error
         else:
@@ -977,7 +999,7 @@ class RobotController(object):
         self.change_gesture(gesture)
 
         # Set into Velocity Mode
-        self.MC.set_mode_all('velocity')
+        self.MC.set_mode_all(self.robot.finger_ids, 'velocity')
 
         # Set i_max and velocity_max
         for f_id in self.robot.finger_ids:
@@ -993,8 +1015,9 @@ class RobotController(object):
         else:
             if self.robot.palm.gesture == 'I':
                 finger_count = 2
-                goal_approach_speed[2] = 0
-                goal_preload[2] = 0
+                if self.robot.finger_count == 3:
+                    goal_approach_speed[2] = 0
+                    goal_preload[2] = 0
             else:
                 finger_count = 3
             print("Approaching...")
@@ -1006,20 +1029,20 @@ class RobotController(object):
             present_time = start_time
 
             # Initialize status variables
-            velocity = [0, 0, 0]
-            iq = [0, 0, 0]
-            goal_iq = [0, 0, 0]
-            goal_position = self.MC.get_present_position_all()  # populate with present pos
-            possibility = [0, 0, 0]
-            possibility_int = [0, 0, 0]  # integration of relatively low possibility
+            velocity = [0 for i in range(finger_count)]
+            iq = [0 for i in range(finger_count)]
+            goal_iq = [0 for i in range(finger_count)]
+            goal_position = [self.MC.get_present_position_all()[i] for i in range(finger_count)]  # populate with present pos
+            possibility = [0 for i in range(finger_count)]
+            possibility_int = [0 for i in range(finger_count)]  # integration of relatively low possibility
             criteria = self.contact_possibility_criteria()  # update criteria
 
             # RAW(unfiltered data)
-            vel_raw = [0, 0, 0]
-            iq_raw = [0, 0, 0]
+            vel_raw = [0 for i in range(finger_count)]
+            iq_raw = [0 for i in range(finger_count)]
 
             # iq window
-            iq_window = [deque([0] * 20), deque([0] * 20), deque([0] * 20)]  # windowed queue for present iq of size 20
+            iq_window = [deque([0] * 20) for i in range(finger_count)]  # windowed queue for present iq of size 20
 
             # Status logging
             velocity_log = []
@@ -1111,7 +1134,7 @@ class RobotController(object):
                     # Check for timeout
                     if grab_time > TIMEOUT_GRAB:
                         print("Grab motion timeout")
-                        self.MC.torque_enable_all(0)
+                        self.MC.torque_enable_all(self.robot.finger_ids, 0)
                         error = 1
 
                     loop_count += 1
@@ -1176,7 +1199,7 @@ class RobotController(object):
                 plt.grid(True)
                 plt.show()
             if error:
-                self.MC.torque_enable_all(0)
+                self.MC.torque_enable_all(self.robot.finger_ids, 0)
                 print("Grab error. System disabled.")
                 return error
             else:
@@ -1230,7 +1253,7 @@ class RobotController(object):
 
         :param str release_mode: change-to-(H)old, (L)et-go, (F)ul-release
 
-        :keyword float hold_stiffness: hold stiffness, only work for change to hold. (See Macros_DAnTE for default)
+        :keyword float hold_stiffness: hold stiffness, only work for change-to-(H)old mode. (See Macros_DAnTE for default)
         :keyword float hold_preload: new preload in change-to-(H)old mode, if any.
         """
 
@@ -1328,14 +1351,14 @@ class RobotController(object):
                 goal_position = [0, 0, 0]
 
             # Send command
-            self.MC.set_mode_all('position')
+            self.MC.set_mode_all(self.robot.finger_ids, 'position')
 
             for i in range(finger_count):
                 self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
             # Enforce writing
             check = 0
             while check < finger_count:
-                for i in range(finger_count):
+                 for i in range(finger_count):
                     if round(self.MC.pbm.get_goal_position(self.robot.finger_ids[i])[0][0][0], 2) != round(goal_position[i], 2):
                         self.MC.pbm.set_goal_position((self.robot.finger_ids[i], goal_position[i]))
                     else:
@@ -1354,517 +1377,6 @@ class RobotController(object):
                 self.idle()
 
         time.sleep(0.5)
-
-    # ------------------------
-    # Deprecated old functions
-    # Might not work anymore
-
-    def grab_old(self, gesture, mode, **options):
-        # Trying a new method of contact detection based on possibility calcultated from velocity and iq
-        """
-        Control grab motion of self.robot
-        If keyword options not specified, it will go with a default. See Macros_DAnTE
-
-        :param str gesture: Grab with a gesture, tripod(Y), pinch(I) or parallel(P)
-        :param str mode: Specify a grab mode: (H)old or (G)rip
-
-        :keyword float approach_speed: Approach speed
-        :keyword float approach_stiffness: Approach stiffness
-        :keyword float final_stiffness: Grip/Hold stiffness
-        :keyword float preload: Grip/Hold reload, preload in Amps.
-        :keyword float max_iq: Maximum torque current
-        :keyword bool logging: Data log function on/off, debug purpose.
-        """
-
-        error = 0  # 1 for timeout, 2 for user interruption, 3 for initialization, 9 for Invalid input
-
-        # Check initialization
-        if not self.robot.initialized:
-            error = 3
-            print("Robot not initialized. Exit.")
-            return error
-
-        # Check enable and enable system if not.
-        if not self.get_robot_enable():
-            self.MC.torque_enable_all(1)
-
-        # 0. Prep
-        # Check input
-        if gesture not in ['Y', 'I', 'P']:
-            print("Invalid gesture input.")
-            error = 9
-            return error
-        elif mode not in ['H', 'G']:
-            print("Invalid mode input.")
-            error = 9
-            return error
-        else:
-            # Sort out all function input data.
-            self.mode = mode
-            # Options:
-            self.approach_speed = max(options.get("approach_speed", default_approach_speed), approach_speed_min)
-            self.approach_stiffness = max(options.get("approach_stiffness", default_approach_stiffness),
-                                          approach_stiffness_min)
-            self.final_stiffness = options.get("final_stiffness", self.approach_stiffness)
-            self.preload = options.get("preload", default_preload)
-            self.max_iq = max(options.get("max_iq", default_max_iq), 2*self.preload)
-            logging = options.get("logging", False) and PLOTTING_OVERRIDE
-
-            # update approach stiffness
-            self.approach_stiffness = approach_stiffness_func(self.approach_speed, self.approach_stiffness)
-
-        # Calculate approach P and I gains from approach_stiffness
-        approach_p = approach_p_func(self.approach_stiffness)
-        approach_i = approach_i_func(self.approach_stiffness)
-
-        contact_count = 0
-
-        # Calculate goal_approach_speed
-        goal_approach_speed = [-self.approach_speed + 2 * self.approach_speed * f.mirrored for f in
-                               self.robot.fingerlist]
-
-        # Start with change into gesture
-        self.change_gesture(gesture)
-        # Set fingers' Direct Force PID according to Stiffness
-        # self.set_approach_stiffness()
-        force_p = self.approach_stiffness
-        force_d = min(max(0.1 * force_p, force_d_min), force_d_max)
-        finger_count = self.get_finger_count()
-        self.set_stiffness(finger_count, force_p, force_d)
-
-        # Set into Direct Force Mode
-        self.MC.set_mode_all('force')
-
-        # Set iq_max
-        for f_id in self.robot.finger_ids:
-            self.MC.pbm.set_limit_iq_max((f_id, self.max_iq))
-        if self.robot.palm.gesture == 'P':
-            # Double THUMB iq_limit in Parallel mode
-            self.MC.pbm.set_limit_iq_max((THUMB.motor_id, 2 * self.max_iq))
-            # Enforce writing
-            check = False
-            while not check:
-                if round(self.MC.pbm.get_limit_iq_max(THUMB.motor_id)[0][0][0], 4) == round(2 * self.max_iq, 4):
-                    check = True
-
-        # usr = input("Press enter to grab...")
-
-        # 3. Fingers close tracking approach_speed, switch to final grip/hold upon object detection
-        if self.robot.contact:
-            print("Please release contact first.")
-            return
-        else:
-            if self.robot.palm.gesture == 'I':
-                finger_count = 2
-            else:
-                finger_count = 3
-            print("Approaching...")
-            # Get start_time
-            # Python Version 3.7 or above
-            # start_time = time.time_ns()/1000000000  # In ns unit
-            start_time = time.time()
-            present_time = start_time
-
-            # Initialize status variables
-            velocity = [0, 0, 0]
-            prev_velocity = [0, 0, 0]
-            velocity_error = [0, 0, 0]
-            velocity_error_int = [0, 0, 0]
-            iq = [0, 0, 0]
-            goal_iq = [0, 0, 0]
-            position = [0, 0, 0]
-            goal_position = self.MC.get_present_position_all()  # populate with present pos
-            possibility = [0, 0, 0]
-            possibility_int = [0, 0, 0]  # integration of relatively low possibility
-            criteria = self.contact_possibility_criteria()  # update criteria
-
-            # RAW(unfiltered data)
-            vel_raw = [0, 0, 0]
-            iq_raw = [0, 0, 0]
-
-            # iq window
-            iq_window = [deque([0] * 20), deque([0] * 20), deque([0] * 20)]  # windowed queue for present iq of size 20
-
-            # Status logging
-            velocity_log = []
-            position_log = []
-            goal_position_log = []
-            time_log = []
-            delta_time_log = []
-            iq_log = []
-            iq_comp_log = []
-            possibility_log = []
-            vel_raw_log = []
-            iq_raw_log = []
-            contact_log = []
-
-            delta_time = 0
-            time.sleep(0.001)  # Delay 1ms so that we don't get a zero delta_time for the first loop.
-
-            delta_time_sum = 0
-            loop_count = 0
-
-            while not (error or self.robot.contact):
-                # Main GRAB loop
-                try:
-                    # Get time stamp
-                    previous_time = present_time
-                    present_time = time.time()
-                    delta_time = present_time - previous_time
-                    grab_time = present_time - start_time
-
-                    # Collect status and send command
-                    status = self.MC.grab_loop_comm(self.robot.palm.gesture, goal_position, goal_iq)
-
-                    # print(time.time()-present_time)
-
-                    # Process data
-                    # print(status)
-                    # Motor Error
-                    motor_err = [i[1] for i in status]
-                    # Position
-                    position = [i[0][0] for i in status]
-                    # iq
-                    iq = [SMOOTHING_IQ * status[i][0][2] + (1 - SMOOTHING_IQ) * iq[i] for i in range(finger_count)]
-                    iq_raw = [status[i][0][2] for i in range(finger_count)]
-                    for idx in range(finger_count):
-                        iq_window[idx].append(iq[idx])
-                        iq_window[idx].popleft()
-                    # Velocity
-                    prev_velocity = velocity
-                    velocity = [SMOOTHING_VEL * status[i][0][1] + (1 - SMOOTHING_VEL) * velocity[i] for i in
-                                range(finger_count)]
-                    vel_raw = [status[i][0][1] for i in range(finger_count)]
-
-                    # Approach motion
-                    # Calculate approach_command
-                    # RobotController PID generating position command so that finger tracks approach_speed
-                    # Build approach commands
-                    velocity_error = [goal_approach_speed[i] - velocity[i] for i in range(finger_count)]
-                    velocity_error_int = [velocity_error[i] * delta_time + velocity_error_int[i]
-                                          for i in range(finger_count)]
-
-                    # Determine if contact and switch to torque mode and temporarily maintain iq_compensation
-                    # Calculate goal_iq/goal_position and switch mode for contacted
-                    # Just send both goal commands, let BEAR choose which to use.
-                    for idx in range(finger_count):
-                        if not self.robot.fingerlist[idx].contact:
-                            # Keep it running for now
-                            # Get possibility
-                            possibility[idx] = self.contact_possibility(abs(iq[idx] - self.robot.iq_compensation[idx]),
-                                                                        abs(velocity[idx]),
-                                                                        grab_time)
-                            if possibility[idx] > criteria[0]:
-                                possibility_int[idx] += possibility[idx]
-                            if possibility[idx] > criteria[1] or possibility_int[idx] > criteria[2]:
-                                # This finger has come to contact
-                                self.robot.fingerlist[idx].contact = True
-                                print('Finger contact:', self.robot.fingerlist[idx].name, 'Position:', position[idx])
-                                self.contact_position[idx] = position[idx]
-                                goal_position[idx] = self.contact_position[idx]
-                                goal_iq[idx] = self.robot.iq_compensation[idx]
-                                self.MC.set_mode(self.robot.fingerlist[idx].motor_id, 'torque')
-                                contact_count += 1
-                            else:
-                                # Build command
-                                goal_position[idx] = position[idx] + approach_p * velocity_error[idx] \
-                                                     + approach_i * velocity_error_int[idx]
-                    # bulk_read_write at loop head.
-                    self.robot.contact = contact_count == finger_count
-
-                    # Data logging
-                    if logging:
-                        delta_time_log.append(delta_time)
-                        time_log.append(grab_time)
-                        velocity_log.append(velocity[:])
-                        position_log.append(position[:])
-                        goal_position_log.append(goal_position[:])
-                        iq_log.append(iq[:])
-                        possibility_log.append(possibility[:])
-                        vel_raw_log.append(vel_raw[:])
-                        iq_raw_log.append(iq_raw[:])
-                        contact_log.append([f.contact for f in self.robot.fingerlist])
-
-                    # Check for timeout
-                    if grab_time > TIMEOUT_GRAB:
-                        print("Grab motion timeout")
-                        self.MC.torque_enable_all(0)
-                        error = 1
-
-                    loop_count += 1
-                    delta_time_sum += delta_time
-
-                except KeyboardInterrupt:
-                    print("User interrupted.")
-                    running = False
-                    error = 2
-
-            # Out of while loop -> error or contact
-            # Write goal status one more time so that the last contact finger gets its goal iq command
-            self.MC.set_goal_iq(self.robot.palm.gesture, goal_iq)
-
-            avg_loop_time = delta_time_sum / loop_count
-            print("Average loop time: %f" % avg_loop_time)
-
-            # Data processing -logging
-            if logging:
-                # Format all data so that it is in this formation:
-                # data_log_all = [[INDEX data], [INDEX_M data], [THUMB data]]
-                velocity_log_all = []
-                position_log_all = []
-                goal_position_log_all = []
-                iq_log_all = []
-                iq_raw_log_all = []
-                vel_raw_log_all = []
-                possibility_log_all = []
-                contact_log_all = []
-
-                for i in range(3):
-                    velocity_log_all.append([data[i] for data in velocity_log])
-                    vel_raw_log_all.append([data[i] for data in vel_raw_log])
-                    position_log_all.append([data[i] for data in position_log])
-                    goal_position_log_all.append([data[i] for data in goal_position_log])
-                    iq_log_all.append([data[i] for data in iq_log])
-                    iq_raw_log_all.append([data[i] for data in iq_raw_log])
-                    possibility_log_all.append([data[i] for data in possibility_log])
-                    contact_log_all.append([data[i] for data in contact_log])
-
-                # # Plot here
-                plt.figure(1)
-                plt.subplot(311)
-                plt.plot(time_log, position_log_all[0], 'b',
-                         time_log, goal_position_log_all[0], 'c',
-                         time_log, velocity_log_all[0], 'r',
-                         time_log, contact_log_all[0], 'k')
-                plt.grid(True)
-
-                plt.subplot(312)
-                plt.plot(time_log, position_log_all[1], 'b',
-                         time_log, goal_position_log_all[1], 'c',
-                         time_log, velocity_log_all[1], 'r',
-                         time_log, contact_log_all[1], 'k')
-                plt.grid(True)
-
-                plt.subplot(313)
-                plt.plot(time_log, position_log_all[2], 'b',
-                         time_log, goal_position_log_all[1], 'c',
-                         time_log, velocity_log_all[2], 'r',
-                         time_log, contact_log_all[2], 'k')
-                plt.grid(True)
-                plt.show()
-
-            if error:
-                self.MC.torque_enable_all(0)
-                print("Grab error. System disabled.")
-                return error
-            else:
-                # # Get contact iq for all fingers
-                # self.contact_iq = [sum(data) / 20 for data in iq_window]
-                # Run grab_end motion
-                self.grab_end(logging=logging)
-
-    def grab_end_old(self, logging=False):
-        # Grab function ends up into this function
-        # All BEARs take position command so that the present_iq reaches preload_iq+iq_compensation
-        # In Parallel mode, THUMB takes 2*preload to balance load on object
-        # Hold mode is different from Grip mode such that Hold mode is damping heavy
-
-        error = 0
-        finger_count = self.get_finger_count()
-        # Change to force mode
-        for idx in range(finger_count):
-            self.MC.set_mode(self.robot.finger_ids[idx], 'force')
-        # Check mode:
-        if self.mode == 'H':
-            # Hold mode, change to big D with small P
-            # Calculate HOLD gains according to final_stiffness
-            p_gain = round(HOLD_P_FACTOR * self.final_stiffness, 2)
-            d_gain = min(round(HOLD_D_FACTOR * self.final_stiffness, 2), HOLD_D_MAX)
-            print("Hold mode - p_gain: %2.2f, d_gain: %2.2f" % (p_gain, d_gain))
-        else:
-            # Grip mode
-            # Calculate GRIP gains according to final_stiffness
-            p_gain = round(GRIP_P_FACTOR * self.final_stiffness, 2)
-            d_gain = round(GRIP_D_FACTOR * self.final_stiffness, 2)
-            print("Grip mode - p_gain: %2.2f, d_gain: %2.2f" % (p_gain, d_gain))
-
-        self.set_stiffness(finger_count, p_gain, d_gain)
-
-        # Calculate preload iq to track
-        signed_balance_factor = [(self.robot.fingerlist[idx].mirrored
-                                  - (not self.robot.fingerlist[idx].mirrored)) * self.balance_factor[idx]
-                                 for idx in range(finger_count)]
-
-        # Get preload P and I gains
-        preload_p, preload_i = self.preload_gains()
-
-        # goal_iq = [self.preload * signed_balance_factor[idx] + self.contact_iq[idx] for idx in range(finger_count)]
-        goal_iq = [self.preload * signed_balance_factor[idx]
-                   + self.robot.iq_compensation[idx] for idx in range(finger_count)]
-
-        # Initialize status variables
-        iq = [0, 0, 0]
-        prev_iq = [0, 0, 0]
-        iq_error = [0, 0, 0]
-        iq_error_int = [0, 0, 0]
-        position = [0, 0, 0]
-        goal_position = self.MC.get_present_position_all()  # populate with present pos
-        goal_position_window = [[], [], []]
-
-        # RAW(unfiltered data)
-        iq_raw = [0, 0, 0]
-
-        # iq window
-        iq_window = [deque([0] * 20), deque([0] * 20), deque([0] * 20)]  # windowed queue for present iq of size 20
-
-        # Status logging
-        position_log = []
-        goal_position_log = []
-        time_log = []
-        delta_time_log = []
-        iq_log = []
-        iq_error_log = []
-        iq_raw_log = []
-
-        delta_time = 0
-        start_time = time.time()
-        present_time = start_time
-        time.sleep(0.001)  # Delay 1ms so that we don't get a zero delta_time for the first loop.
-
-        delta_time_sum = 0
-        loop_count = 0
-        goal_iq_check = [False, False, False]
-        goal_reached = False
-        run = True
-        # Track goal_iq
-        print("Preloading...")
-        while run and not error:
-            # try:
-            # get time stamp
-            previous_time = present_time
-            present_time = time.time()
-            delta_time = present_time - previous_time
-
-            # Collet status and send command
-            status = self.MC.grab_loop_comm(self.robot.palm.gesture, goal_position, [0, 0, 0])
-
-            # Process data
-            # Motor Error
-            motor_err = [i[1] for i in status]
-            # Position
-            position = [i[0][0] for i in status]
-            # iq
-            iq = [SMOOTHING_IQ * status[i][0][2] + (1 - SMOOTHING_IQ) * iq[i] for i in range(finger_count)]
-            for idx in range(finger_count):
-                iq_window[idx].append(iq[idx])
-                iq_window[idx].popleft()
-
-            # grab_end preload motion
-            # Calculate preload_command
-            # RobotController PID generating position command so that finger tracks goal_iq
-            # Build commands
-            iq_error = [goal_iq[i] - iq[i] for i in range(finger_count)]
-            iq_error_int = [iq_error[i] * delta_time + iq_error_int[i] for i in range(finger_count)]
-
-            # Loop to track goal_iq and confirm status with avrg(iq_window)
-            # Once confirmed, keep running loop for 1 sec and maintain avrg(goal_pos)
-            for idx in range(finger_count):
-                # Build command
-                goal_position[idx] = position[idx] + preload_p * iq_error[idx] + preload_i * iq_error_int[idx]
-                if not goal_iq_check[idx]:
-                    # This finger has not reached goal iq yet
-                    avrg_iq = sum(iq_window[idx]) / 20
-                    if abs(avrg_iq - goal_iq[idx]) < 0.05:
-                        # Goal iq reached
-                        goal_iq_check[idx] = True
-                        print('Goal iq reached:', self.robot.fingerlist[idx].name)
-            # bulk_read_write at loop head.
-            if not goal_reached:
-                goal_reached = sum(goal_iq_check) == finger_count
-                retain_time_start = time.time()
-            else:
-                # All fingers have reached goal iq
-                for idx in range(finger_count):
-                    goal_position_window[idx].append(goal_position[idx])
-                if time.time() - retain_time_start > 1:
-                    # 1 sec has passed
-                    run = False
-
-            if logging:
-                # Data logging
-                time_log.append(present_time - start_time)
-                iq_log.append(iq[:])
-                iq_error_log.append(iq_error[:])
-                position_log.append(position[:])
-                goal_position_log.append(goal_position[:])
-
-            # Check for timeout
-            if present_time - start_time > TIMEOUT_GRIP:
-                print("Grab end motion timeout, preload can not be reached")
-                # self.MC.torque_enable_all(0)
-                error = 1
-            # except KeyboardInterrupt:
-            #     print("User interrupted.")
-            #     running = False
-            #     error = 2
-            time.sleep(0.001)
-
-        # Out of while loop: preload reached or error
-        # Data processing -logging
-        if logging:
-            # Format all data so that it is in this formation:
-            # data_log_all = [[INDEX data], [INDEX_M data], [THUMB data]]
-            position_log_all = []
-            goal_position_log_all = []
-            iq_log_all = []
-            iq_error_log_all = []
-            for i in range(3):
-                position_log_all.append([data[i] for data in position_log])
-                goal_position_log_all.append([data[i] for data in goal_position_log])
-                iq_log_all.append([data[i] for data in iq_log])
-                iq_error_log_all.append([data[i] for data in iq_error_log])
-
-            # # Plot here
-            plt.figure(2)
-            plt.subplot(321)
-            plt.plot(time_log, iq_log_all[0], 'b',
-                     time_log, iq_error_log_all[0], 'c',
-                     time_log, [goal_iq[0]] * len(iq_log_all[0]), 'r--')
-            plt.grid(True)
-            plt.subplot(322)
-            plt.plot(time_log, position_log_all[0], 'b',
-                     time_log, goal_position_log_all[0], 'c')
-            plt.grid(True)
-
-            plt.subplot(323)
-            plt.plot(time_log, iq_log_all[1], 'b',
-                     time_log, iq_error_log_all[1], 'c',
-                     time_log, [goal_iq[1]] * len(iq_log_all[1]), 'r--')
-            plt.grid(True)
-            plt.subplot(324)
-            plt.plot(time_log, position_log_all[1], 'b',
-                     time_log, goal_position_log_all[1], 'c')
-            plt.grid(True)
-
-            plt.subplot(325)
-            plt.plot(time_log, iq_log_all[2], 'b',
-                     time_log, iq_error_log_all[2], 'c',
-                     time_log, [goal_iq[2]] * len(iq_log_all[2]), 'r--')
-            plt.grid(True)
-            plt.subplot(326)
-            plt.plot(time_log, position_log_all[2], 'b',
-                     time_log, goal_position_log_all[2], 'c')
-            plt.grid(True)
-            plt.show()
-
-        if error:
-            self.MC.torque_enable_all(0)
-            print("Grab end motion error. System disabled.")
-            return error
-        else:
-            # Write average goal status
-            goal_position = [sum(i) / len(i) for i in goal_position_window]
-            self.MC.set_goal_position(self.robot.palm.gesture, goal_position)
 
     # ------------------------
     # Utility Functions
@@ -1977,9 +1489,9 @@ class RobotController(object):
         :return: bool
         """
         if self.bypass_DXL:
-            enable = sum(self.MC.get_enable_all()) == 3
+            enable = sum(self.MC.get_enable_all(self.robot.finger_ids)) == self.robot.finger_count
         else:
-            enable = (sum(self.MC.get_enable_all()) + self.DC.get_enable()) == 4
+            enable = (sum(self.MC.get_enable_all(self.robot.finger_ids)) + self.DC.get_enable()) == self.robot.finger_count+1
         return enable
 
     def set_robot_enable(self, val):
@@ -1990,9 +1502,9 @@ class RobotController(object):
         """
         # Enable/disable all actuators
         if self.bypass_DXL:
-            self.MC.torque_enable_all(val)
+            self.MC.torque_enable_all(self.robot.finger_ids, val)
         else:
-            self.MC.torque_enable_all(val)
+            self.MC.torque_enable_all(self.robot.finger_ids, val)
             self.DC.torque_enable(val)
 
     def idle(self, *fingers):

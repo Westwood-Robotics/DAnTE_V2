@@ -22,7 +22,7 @@ Create an empty file in the boot directory called ssh. Make sure that the file h
 
 From now on, we will be able to do all the following via SSH. Default username is pi and the password is raspberry
 
-5. Inser the SD card into your Pi Zero W and power it up. Wait for it to boot up and connect to your network. This can take up to 5 min.
+5. Insert the SD card into your Pi Zero W and power it up. Wait for it to boot up and connect to your network. This can take up to 5 min.
 
 6. SSH into your Pi zero W.
 
@@ -63,7 +63,7 @@ Install pip3:
 $ sudo apt-get install python3-pip
 Check if installation is successful by checking the version of pip3:
 $ pip3 -V 
-Note: any pip3 operation on pi zero appears to be unreasonablely slow, so be patient.
+Note: any pip3 operation on pi zero appears to be unreasonablely slow, so be patient (at least 1min).
 
 Pi lite system does not come with wiringpi so please install it:
 $ pip3 install wiringpi

@@ -1,11 +1,10 @@
 #!usr/bin/env python
-__author__ 		= "Min Sung Ahn"
-__email__ 		= "aminsung@gmail.com"
-__copyright__ 	= "Copyright 2019 RoMeLa"
-__date__ = "January 1, 1999"
-__version__ = "0.1.0"
+__author__ = "X. Zhang"
+__email__ = "xzhang@westwoodrobotics.io"
+__copyright__ = "Copyright 2020~2022 Westwood Robotics"
+__date__ = "May 8, 2022"
+__version__ = "0.1.3"
 __status__ = "Beta"
-
 """
 Script that holds robot constants.
 """
@@ -61,9 +60,9 @@ A = 28.8675  # Distance from finger center axis to palm center
 # ------------------------------
 # MOTOR ID
 # ------------------------------
-BEAR_THUMB = 1
-BEAR_INDEX = 2
-BEAR_INDEX_M = 3
+BEAR_THUMB = 3
+BEAR_INDEX = 1
+BEAR_INDEX_M = 2
 
 DXL_PALM = 1
 
