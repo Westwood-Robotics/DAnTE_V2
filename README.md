@@ -20,7 +20,7 @@ DAnTE_V2 takes 9~12V DC power supply. Lower voltage will cause hardware fault wh
 
 This current DAnTE firmware is only written in Python 3 thus a computer with Python 3 environment is required. 
 
-DAnTE is controlled by a Raspberry Pi 0 W by default, but it can also be paired with other computers that has at least equivalent computing power. Keep in mind that an SPI interface is required to communicate with the external encoders, otherwise, please go to Settings/Constants_DAnTE.py and set "EXTERNAL_ENC" to "None".
+DAnTE is controlled by a Raspberry Pi 0 W/Banana Pi M2 Zero by default, but it can also be paired with other computers that has at least equivalent computing power. Keep in mind that an SPI interface is required to communicate with the external encoders, otherwise, please go to Settings/Constants_DAnTE.py and set "EXTERNAL_ENC" to "None".
 
 ## Dependencies
 
