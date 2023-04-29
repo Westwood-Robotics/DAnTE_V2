@@ -51,6 +51,7 @@ sudo udevadm control --reload
 ### 4. SciPy
 
 The SciPy package is required for kinematics. Install with pip before playing with DAnTE. 
+* You might also need to install Pybind11 before SciPy.
 
 ### 5. WiringPi & spidev
 
