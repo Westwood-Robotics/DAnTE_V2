@@ -26,7 +26,7 @@ DXL_port = "COM18" # COM port for DXL if not PI
 
 try:
     with open('/sys/firmware/devicetree/base/model', 'r') as sysinfo:
-        if 'raspberry pi zero' in sysinfo.read().lower():
+        if 'sun8iw7p1' or 'raspberry pi zero' in sysinfo.read().lower(): 
             PI0 = True
 except Exception:
     pass
