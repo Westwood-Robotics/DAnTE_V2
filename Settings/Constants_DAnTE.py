@@ -93,11 +93,11 @@ IQID_P = 0.02
 IQID_I = 0.02
 IQID_D = 0
 
-POS_P = 5
-POS_I = 0.005
+POS_P = 8
+POS_I = 0.01
 POS_D = 0
 
-VEL_P = 0.4
+VEL_P = 1
 VEL_I = 0.005
 VEL_D = 0.0
 
@@ -138,7 +138,7 @@ ENC_INDEX_M = 17
 VEL_CAL = 1.5
 # VEL_RESET = 5
 IQ_CAL_DETECT = 0.65
-VEL_CAL_DETECT = 0.005
+VEL_CAL_DETECT = 0.05
 
 # ------------------------------
 # INITIALIZATION
@@ -146,6 +146,13 @@ VEL_CAL_DETECT = 0.005
 VEL_MAX_INIT = 2.5
 IQ_MAX_INIT = 1.5
 TIMEOUT_INIT = 5
+
+# ------------------------------
+# RESET
+# ------------------------------
+VEL_MAX_RST = 2.5
+IQ_MAX_RST = 1.5
+TIMEOUT_RST = 5
 
 # ------------------------------
 # GRAB Function

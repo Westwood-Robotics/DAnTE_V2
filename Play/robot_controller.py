@@ -192,7 +192,7 @@ class RobotController(object):
             # There are only 2 fingers, set gesture to pinch-"I"
             self.robot.palm.gesture = "I"
 
-        self.MC.init_driver_all(self.robot.finger_ids)
+        self.MC.init_driver_all(self.robot.finger_ids) # Write PID settings and limit IQ limit vel to BEARs
 
         # 1. Compare home_offset
         for i in range(self.robot.finger_count):
@@ -252,7 +252,7 @@ class RobotController(object):
                     elapsed_time = time.time() - start_time
                     if elapsed_time < TIMEOUT_INIT:
                         for i in range(3):
-                            if running[i] and abs(position[i] - self.robot.fingerlist[i].travel) < 0.1:
+                            if running[i] and abs(position[i] - self.robot.fingerlist[i].travel) < 0.15:
                                 running[i] = False
                                 self.MC.damping_mode(self.robot.finger_ids[i])
                                 print("%s end travel complete." % self.robot.fingerlist[i].name)
@@ -295,7 +295,7 @@ class RobotController(object):
                 elapsed_time = time.time() - start_time
                 if elapsed_time < TIMEOUT_INIT:
                     for i in range(self.robot.finger_count):
-                        if abs(position[i]) < 0.1:
+                        if abs(position[i]) < 0.15:
                             running[i] = False
                             self.MC.torque_enable(self.robot.finger_ids[i], 0)
                         else:
@@ -387,7 +387,7 @@ class RobotController(object):
 
         self.MC.init_driver_all(self.robot.finger_ids)
 
-        # Set Mode
+        # Set Mode to Velocity
         self.MC.set_mode_all(self.robot.finger_ids, 'velocity')
 
         # Set Limits
@@ -618,7 +618,7 @@ class RobotController(object):
                         iq = status[0][0][1]
 
                         if abs(vel) < VEL_CAL_DETECT and abs(iq) > IQ_CAL_DETECT:
-                            if detect_count > 20:
+                            if detect_count > 10:
                                 # TODO: check total travel value
                                 print("%s end_pos reached." % f.name)
                                 f.travel = self.MC.pbm.get_present_position(f.motor_id)[0][0][0]
@@ -655,7 +655,7 @@ class RobotController(object):
             self.MC.pbm.set_p_gain_position((f.motor_id, POS_P))
             self.MC.pbm.set_i_gain_position((f.motor_id, POS_I))
             self.MC.pbm.set_d_gain_position((f.motor_id, POS_D))
-            self.MC.pbm.set_limit_iq_max((f.motor_id, 1))
+            self.MC.pbm.set_limit_iq_max((f.motor_id, IQ_MAX_RST))
             time.sleep(0.2)
             print("Finger resetting...")
 
@@ -665,14 +665,14 @@ class RobotController(object):
             running = True
             # Enable torque and go to Home
             self.MC.torque_enable(f.motor_id, 1)
-            self.MC.pbm.set_goal_position((f.motor_id, 0.01))
+            self.MC.pbm.set_goal_position((f.motor_id, 0.1))
             time.sleep(1)
             while running:
                 try:
                     status = self.MC.pbm.get_present_position(f.motor_id)
                     err = status[0][1]
                     position = status[0][0][0]
-                    if abs(position) < 0.08:
+                    if abs(position) < 0.15:
                         running = False
                         self.MC.torque_enable(f.motor_id, 0)
                     if err != 128:

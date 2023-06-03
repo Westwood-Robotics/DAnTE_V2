@@ -59,6 +59,10 @@ class MotorController(object):
         self.pbm.set_limit_iq_max((m_id, IQ_MAX_INIT))
         self.pbm.set_limit_velocity_max((m_id, VEL_MAX_INIT))
 
+        # Clear position limit setting if any
+        self.damping_release(m_id)
+
+
         print("Motor driver initialized for Motor:%d." % m_id)
 
     def init_driver_all(self, id_list):
