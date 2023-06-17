@@ -21,8 +21,8 @@ Empty_PALM = PalmDataStructure(name = "Empty_PALM", motor_id = 0)
 # Controller related settings
 # ---------
 PI0 = False # True if using pi0
-BEAR_port = "COM9" # COM port for BEAR if not PI
-DXL_port = "COM18" # COM port for DXL if not PI
+BEAR_port = "COM8" # COM port for BEAR if not PI
+DXL_port = "COM7" # COM port for DXL if not PI
 
 try:
     with open('/sys/firmware/devicetree/base/model', 'r') as sysinfo:
@@ -44,7 +44,7 @@ if PI0:
                                   fingerlist=[INDEX, INDEX_M])
 else:
     # Regular DAnTE:
-    DAnTE = RobotDataStructure("DAnTE", BEAR_port, 8000000, DXL_port, 2000000, PALM, [INDEX, INDEX_M, THUMB])
+    DAnTE = RobotDataStructure("DAnTE", BEAR_port, 8000000, DXL_port, 57600, PALM, [INDEX, INDEX_M, THUMB])
     # 2-Finger DAnTE:
     DAnTE_2F = RobotDataStructure(name = "DAnTE_2F",
                                   BEAR_port = BEAR_port,

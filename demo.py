@@ -93,7 +93,7 @@ while run:
     usr = input("Press ENTER to let go.")
     rc.release('L')
     usr = input("Press ENTER to release.")
-    rc.release()
+    delta_time
 
 rc.release()
 rc.set_robot_enable(0)

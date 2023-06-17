@@ -204,12 +204,12 @@ class RobotController(object):
         present_pos = self.MC.pbm.bulk_read(self.robot.finger_ids, ['present_position'])
         for i, pos in enumerate(present_pos):
             if self.robot.fingerlist[i].mirrored:
-                if pos[0][0] < -0.1 or pos[0][0] > self.robot.fingerlist[i].travel + 0.1:
+                if pos[0][0] < -0.2 or pos[0][0] > self.robot.fingerlist[i].travel + 0.1:
                     abnormal[i] = abnormal[i] | 0b0010
                     print("%s present_pos out of range." % self.robot.fingerlist[i].name)
                     print(pos[0])
             else:
-                if pos[0][0] > 0.1 or pos[0][0] < self.robot.fingerlist[i].travel - 0.1:
+                if pos[0][0] > 0.2 or pos[0][0] < self.robot.fingerlist[i].travel - 0.1:
                     abnormal[i] = abnormal[i] | 0b0010
                     print("%s present_pos out of range." % self.robot.fingerlist[i].name)
                     print(pos[0])
@@ -233,6 +233,7 @@ class RobotController(object):
         # Set mode and limits
         self.MC.set_mode_all(self.robot.finger_ids, 'position')
 
+        print("Moving to end_pos....")
         # 4. Move to End -> complete
         if self.robot.finger_count > 2:
             running = [True, True, True]
@@ -280,6 +281,8 @@ class RobotController(object):
         # Enable torque and go to Home
         for i in self.robot.finger_ids:
             self.MC.damping_release(i)
+        time.sleep(0.5)
+        self.MC.torque_enable_all(self.robot.finger_ids, 0)
         self.MC.torque_enable_all(self.robot.finger_ids, 1)
         self.MC.pbm.set_goal_position((THUMB.motor_id, 0),
                                       (INDEX.motor_id, 0),
@@ -350,12 +353,15 @@ class RobotController(object):
                 # There is no iq compensation data
                 print("WARNING: No iq_compensation found. Contact detection performance may be reduced.")
                 usr = input("Do you want to run a quick calibration? (Y/n)")
-                if usr == 'Y' or 'y':
+                if usr == 'Y' or usr == 'y':
                     # Run iq_compensation calibration
                     if self.calibration_iq_compensation():
                         self.robot.iq_compensation = self.read_iq_compensation()
                     else:
                         print("Iq compensation calibration failed.")
+                else:
+                    print("iq_compensation ignored. Contact detection performance may be reduced.")
+                    self.robot.iq_compensation = [0.0, 0.0, 0.0]
             else:
                 self.robot.iq_compensation = iq_compensation
             return True
@@ -393,7 +399,7 @@ class RobotController(object):
         # Set Limits
         for f in self.robot.fingerlist:
             # Limits
-            self.MC.pbm.set_limit_iq_max((f.motor_id, 1.5))
+            self.MC.pbm.set_limit_iq_max((f.motor_id, 2))
             self.MC.pbm.set_limit_velocity_max((f.motor_id, 2 * VEL_CAL))
 
         if self.robot.finger_count > 2:
@@ -1037,6 +1043,8 @@ class RobotController(object):
             possibility_int = [0 for i in range(finger_count)]  # integration of relatively low possibility
             criteria = self.contact_possibility_criteria()  # update criteria
 
+            print(criteria)
+
             # RAW(unfiltered data)
             vel_raw = [0 for i in range(finger_count)]
             iq_raw = [0 for i in range(finger_count)]
@@ -1068,11 +1076,15 @@ class RobotController(object):
                     previous_time = present_time
                     present_time = time.time()
                     delta_time = present_time - previous_time
+                    if delta_time<0.001:
+                        time.sleep(0.001-delta_time)
                     grab_time = present_time - start_time
 
                     # Collect status and send velocity command
                     status = self.MC.grab_loop_comm_all(self.robot.palm.gesture,
                                                         goal_position, goal_approach_speed, goal_iq)
+
+                    # pdb.set_trace()
 
                     # Process data
                     # Motor Error
@@ -1095,12 +1107,12 @@ class RobotController(object):
                     # Determine if contact and switch to force mode and maintain contact position, 0-velocity, preload
                     # Just send all goal commands, let BEAR choose which to use.
                     for idx in range(finger_count):
+                        # pdb.set_trace()
                         if not self.robot.fingerlist[idx].contact:
                             # Keep it running for now
                             # Get possibility
-                            possibility[idx] = self.contact_possibility(abs(iq[idx] - self.robot.iq_compensation[idx]),
-                                                                        abs(velocity[idx]),
-                                                                        grab_time)
+                            possibility[idx] = self.contact_possibility(abs(iq[idx] - self.robot.iq_compensation[idx]), abs(velocity[idx]), grab_time)
+                            print("Motor:", idx, " possibility:", possibility[idx])
                             if possibility[idx] > criteria[0]:
                                 possibility_int[idx] += possibility[idx]
                             if possibility[idx] > criteria[1] or possibility_int[idx] > criteria[2]:
@@ -1451,7 +1463,7 @@ class RobotController(object):
                         error = error | (1 << idx)
                         break
                     # Retry in 0.5s
-                    # print("Retry in 0.5 second.")
+                    print("Retry in 0.5 second.")
                     time.sleep(0.5)
                 else:
                     # Ping succeed
@@ -1587,7 +1599,8 @@ class RobotController(object):
         factor_a = 0.25
         iq = min(iq, 1)
         vel = max(vel, 0.3)
-        p = min((10 * min(t, 0.1) / (factor_a ** iq) - 1) / vel, 10) / 10
+        temp_factor = 1
+        p = temp_factor * min((10 * min(t, 0.1) / (factor_a ** iq) - 1) / vel, 10) / 10
         return p
 
     def contact_possibility_criteria(self):

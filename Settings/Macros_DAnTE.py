@@ -29,7 +29,7 @@ detect_current_min = 0.35
 confident_detect_current = 0.4
 detect_confirm = 2  # Times a detect must be confirmed before triggering
 
-approach_i_limit = 1  # Limit I when approaching with velocity mode
+approach_i_limit = 2.5  # Limit I when approaching with velocity mode
 approach_stiffness_min = 0.2
 approach_d = 0  # Acceleration is too noisy, DO NOT USE
 
