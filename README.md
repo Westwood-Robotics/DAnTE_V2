@@ -275,5 +275,15 @@ Note that the forward kinematics will be calculated based on the present values 
 ## Future work
 
 - Interactive operation synced with operator with force
+- 
+
+## Misc Problems
+
+1. USB drive inserted but can not be seen in /media/pi, often happens with Raspbian:
+
+The problem was that the automounter did not have the permission to create the mount point directory in /media/pi. So I solved it by the below command.
+```
+sudo chmod 777 /media/pi
+```
 
 
